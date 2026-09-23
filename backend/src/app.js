@@ -17,6 +17,11 @@ import chatRoutes from './routes/chatRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { csrfMiddleware } from './middleware/csrf.js';
 import { sendSuccess } from './utils/response.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -83,6 +88,16 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/my-tasks', myTaskRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
+
+// Serve frontend static files in production
+if (env.nodeEnv === 'production') {
+  const publicPath = path.join(__dirname, '../../public');
+  app.use(express.static(publicPath));
+  
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(publicPath, 'index.html'));
+  });
+}
 
 app.use(errorHandler);
 

@@ -1,9 +1,9 @@
 services:
-  # Backend Web Service
+  # Unified Web Service (Frontend + Backend)
   - type: web
-    name: taskcircle-backend
+    name: taskcircle
     env: docker
-    rootDir: backend
+    rootDir: .
     plan: free
     envVars:
       - key: NODE_ENV
@@ -20,25 +20,15 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://taskcircle-frontend.onrender.com # Will update if you customize the frontend name
+        value: https://taskcircle.onrender.com # Change this if you use a custom domain
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_CALLBACK_URL
-        value: https://taskcircle-backend.onrender.com/api/auth/google/callback
+        value: https://taskcircle.onrender.com/api/auth/google/callback
       - key: GROQ_API_KEY
         sync: false
-
-  # Frontend Web Service
-  - type: web
-    name: taskcircle-frontend
-    env: docker
-    rootDir: frontend
-    plan: free
-    envVars:
-      - key: VITE_API_URL
-        value: https://taskcircle-backend.onrender.com # Must match the backend name above
 
 databases:
   - name: taskcircle-db
@@ -46,8 +36,6 @@ databases:
     databaseName: taskcircle
     user: taskcircle_user
 
-# Redis is not officially supported natively in render.yaml blueprints without a paid plan or specific add-on for some regions. 
-# We're creating it as a private service using the official Redis Docker image.
   - type: redis
     name: taskcircle-redis
     plan: free
