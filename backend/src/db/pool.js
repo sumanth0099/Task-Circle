@@ -3,7 +3,7 @@ import { env } from '../config/env.js';
 
 const { Pool } = pg;
 
-const needsSsl = env.nodeEnv === 'production' || env.databaseUrl.includes('neon.tech');
+const needsSsl = env.nodeEnv === 'production' || (env.databaseUrl && env.databaseUrl.includes('neon.tech'));
 
 export const pool = new Pool({
   connectionString: env.databaseUrl,
