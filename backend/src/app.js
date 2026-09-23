@@ -45,7 +45,12 @@ app.use(cors({
 
 app.use(express.json({ limit: '1mb' }));
 
-// Global rate limit
+// ─── Serve frontend static files FIRST (before session/auth/CSRF) ────────────
+// This ensures CSS/JS/images are never blocked by auth middleware or Redis errors.
+const publicPath = path.join(__dirname, '../public');
+app.use(express.static(publicPath));
+
+// ─── Global rate limit ───────────────────────────────────────────────────────
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 500,
@@ -89,10 +94,7 @@ app.use('/api/my-tasks', myTaskRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
 
-// Serve frontend static files
-const publicPath = path.join(__dirname, '../public');
-app.use(express.static(publicPath));
-
+// SPA catch-all: return index.html for any unmatched route (React Router handles it)
 app.get(/\/.*/, (req, res) => {
   res.sendFile(path.join(publicPath, 'index.html'));
 });
