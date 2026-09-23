@@ -1,0 +1,1695 @@
+
+
+# Build TaskCircle — Production-Ready Full-Stack Application
+
+Build the complete **TaskCircle** application as a production-ready full-stack web application.
+
+The project must be **fully runnable locally, Dockerized, and ready to deploy directly to Render** for both the frontend and backend.
+
+Do not provide only examples, pseudo-code, incomplete files, or architecture descriptions. Generate the actual implementation with all required files, configurations, database migrations, Dockerfiles, environment examples, README documentation, and deployment configuration.
+
+---
+
+# 1. Core Requirements
+
+TaskCircle is a collaborative task-management platform based around **Circles**.
+
+Users can:
+
+* Sign in using Google
+* Create Circles
+* Join Circles
+* Manage Circle members
+* Assign tasks
+* Assign a task to every Circle member
+* Track task progress
+* Receive notifications
+* Receive automated deadline reminders
+* Manage their profile and notification preferences
+
+The application must be designed as a real production application rather than a classroom prototype.
+
+---
+
+# 2. Mandatory Technology Rules
+
+## Frontend
+
+Use:
+
+* React
+* Vite
+* JavaScript only
+* React Router
+* Native browser `fetch()`
+* Plain CSS
+
+Do NOT use:
+
+* TypeScript
+* Axios
+* Tailwind CSS
+* Bootstrap
+* Material UI
+* Chakra UI
+* Any CSS framework
+* Any frontend authentication SDK that replaces the backend session system
+
+All frontend files must use JavaScript/JSX.
+
+Examples:
+
+```text
+.js
+.jsx
+.css
+```
+
+No:
+
+```text
+.ts
+.tsx
+```
+
+---
+
+# 3. Backend
+
+Use:
+
+* Node.js
+* Express
+* JavaScript
+* ES Modules
+* PostgreSQL
+* `pg`
+* express-session
+* Redis session store
+* Google OAuth 2.0
+* node-cron
+
+Do NOT use:
+
+* Prisma
+* Sequelize
+* TypeORM
+* Mongoose
+* Any ORM
+* JWT authentication
+* OTP authentication
+* Password authentication
+* Axios
+
+Database queries must use `pg` with parameterized SQL queries.
+
+Example:
+
+```js
+const result = await pool.query(
+  "SELECT * FROM users WHERE google_id = $1",
+  [googleId]
+);
+```
+
+Never construct SQL using unsafe string concatenation.
+
+---
+
+# 4. Authentication
+
+Completely remove:
+
+* Email/password login
+* Password registration
+* OTP
+* 6-digit OTP
+* Password reset
+* JWT
+* localStorage authentication tokens
+
+Use **Google OAuth only**.
+
+Authentication flow:
+
+```text
+User
+ ↓
+Continue with Google
+ ↓
+Google OAuth
+ ↓
+Backend receives OAuth callback
+ ↓
+Backend verifies Google identity
+ ↓
+Find user by Google ID/email
+ ↓
+Create user if necessary
+ ↓
+Create server-side session
+ ↓
+Store session in Redis
+ ↓
+Set secure HTTP-only cookie
+ ↓
+Redirect to frontend
+```
+
+Use:
+
+```text
+express-session
+```
+
+with a Redis-backed session store.
+
+The browser must never receive a JWT.
+
+Do not store authentication tokens in:
+
+```text
+localStorage
+sessionStorage
+```
+
+Use secure HTTP-only cookies.
+
+Production cookie configuration must properly support Render deployment.
+
+Use environment-based configuration for:
+
+* `secure`
+* `sameSite`
+* session secret
+* frontend URL
+
+---
+
+# 5. Google OAuth
+
+Implement real Google OAuth.
+
+Required environment variables:
+
+```env
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=
+```
+
+Local callback example:
+
+```text
+http://localhost:5000/api/auth/google/callback
+```
+
+Production callback must use the deployed Render backend URL.
+
+Document exactly how to configure Google Cloud OAuth credentials.
+
+The README must explain:
+
+1. Creating a Google Cloud project
+2. Configuring OAuth consent screen
+3. Creating OAuth credentials
+4. Adding authorized JavaScript origins
+5. Adding authorized redirect URIs
+6. Configuring local development
+7. Configuring the Render production callback URL
+
+Do not hardcode Google credentials anywhere.
+
+---
+
+# 6. PostgreSQL
+
+Use PostgreSQL through:
+
+```text
+pg
+```
+
+Use a connection pool.
+
+Example:
+
+```js
+import pg from "pg";
+
+const { Pool } = pg;
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false
+});
+```
+
+Use parameterized SQL everywhere.
+
+Do not use Prisma or another ORM.
+
+---
+
+# 7. Neon PostgreSQL
+
+The application must work with **Neon PostgreSQL**.
+
+Use:
+
+```env
+DATABASE_URL=
+```
+
+The README must explain:
+
+* Creating a Neon database
+* Getting the connection string
+* Adding `DATABASE_URL` to Render
+* Running migrations against Neon
+
+The database connection must work in Render production.
+
+---
+
+# 8. Redis
+
+Use managed/cloud Redis for production sessions.
+
+Use:
+
+```env
+REDIS_URL=
+```
+
+Do not use in-memory sessions in production.
+
+The README must explain that a managed Redis provider can be used and that its connection URL should be supplied through `REDIS_URL`.
+
+The application must use Redis for:
+
+```text
+express-session
+```
+
+sessions.
+
+---
+
+# 9. Database Schema
+
+Create migrations for:
+
+```text
+users
+circles
+memberships
+join_requests
+tasks
+notifications
+notification_preferences
+```
+
+Suggested structure:
+
+```text
+backend/
+└── migrations/
+    ├── 001_create_users.sql
+    ├── 002_create_circles.sql
+    ├── 003_create_memberships.sql
+    ├── 004_create_join_requests.sql
+    ├── 005_create_tasks.sql
+    ├── 006_create_notifications.sql
+    └── 007_create_notification_preferences.sql
+```
+
+Include:
+
+* Primary keys
+* Foreign keys
+* Unique constraints
+* Useful indexes
+* Appropriate timestamps
+* Appropriate defaults
+* Referential integrity
+
+Create a simple JavaScript migration runner using `pg`.
+
+For example:
+
+```text
+npm run migrate
+```
+
+The command must actually work.
+
+---
+
+# 10. Users
+
+Users should contain information such as:
+
+```text
+id
+google_id
+email
+name
+username
+phone
+profile_picture
+created_at
+updated_at
+```
+
+Google ID and email must be handled safely.
+
+Username should have appropriate uniqueness rules if usernames are required.
+
+---
+
+# 11. Circles
+
+A Circle represents a team/group/workspace.
+
+Each Circle should support:
+
+```text
+id
+name
+description
+group_code
+privacy
+created_by
+created_at
+updated_at
+```
+
+Privacy:
+
+```text
+PUBLIC
+PRIVATE
+```
+
+Each Circle must have a unique 8-character group code.
+
+---
+
+# 12. Circle Roles
+
+Support:
+
+```text
+ADMIN
+MODERATOR
+MEMBER
+```
+
+Members should have appropriate permissions.
+
+The backend must enforce authorization.
+
+Do not rely only on frontend role checks.
+
+---
+
+# 13. Join Requests
+
+Private Circles should support join requests.
+
+Statuses:
+
+```text
+PENDING
+APPROVED
+REJECTED
+```
+
+Admins/moderators with appropriate permissions can approve or reject requests.
+
+---
+
+# 14. Tasks
+
+Tasks should contain:
+
+```text
+id
+circle_id
+assigned_to
+created_by
+title
+description
+priority
+due_date
+reference_link
+status
+created_at
+updated_at
+```
+
+Priority:
+
+```text
+LOW
+MEDIUM
+HIGH
+```
+
+Status:
+
+```text
+TODO
+IN_PROGRESS
+COMPLETED
+```
+
+Users should be able to:
+
+* Create tasks
+* Assign tasks
+* Update tasks
+* Change task status
+* View their tasks
+* View Circle tasks
+* View task details
+
+---
+
+# 15. Assign to All
+
+Implement a real **Assign to All** feature.
+
+When an authorized user chooses:
+
+```text
+Assign to All
+```
+
+the backend must:
+
+1. Retrieve all active Circle members.
+2. Create an independent task for every member.
+3. Assign each task to one member.
+4. Create a NEW_TASK notification for each assignee.
+
+Do NOT create one shared task record.
+
+Example:
+
+```text
+Circle has 5 members
+
+Assign to All
+        ↓
+5 independent task records
+        ↓
+Member A → Task
+Member B → Task
+Member C → Task
+Member D → Task
+Member E → Task
+```
+
+Each user must be able to update their own task independently.
+
+Use a database transaction where appropriate so bulk assignment does not leave partially-created data.
+
+---
+
+# 16. Notifications
+
+Support:
+
+```text
+NEW_TASK
+DUE_TODAY
+DUE_TOMORROW
+OVERDUE
+```
+
+Notifications should include:
+
+```text
+id
+user_id
+task_id
+type
+message
+is_read
+created_at
+```
+
+Users should be able to:
+
+* View notifications
+* Mark notifications as read
+* View unread notification count
+
+---
+
+# 17. Notification Preferences
+
+Users should be able to control notification preferences.
+
+Store preferences in PostgreSQL.
+
+The scheduler must respect those preferences.
+
+---
+
+# 18. Deadline Scheduler
+
+Use:
+
+```text
+node-cron
+```
+
+Run the scheduler twice daily:
+
+```text
+09:00 IST
+17:00 IST
+```
+
+Use:
+
+```text
+Asia/Kolkata
+```
+
+timezone.
+
+The scheduler should:
+
+1. Find incomplete tasks.
+2. Identify tasks due today.
+3. Identify tasks due tomorrow.
+4. Identify overdue tasks.
+5. Check user notification preferences.
+6. Prevent duplicate notifications where appropriate.
+7. Insert notifications into PostgreSQL.
+
+Do not create duplicate notifications every time the scheduler executes.
+
+The scheduler must work correctly in the Render backend service.
+
+Document the scheduler in the README.
+
+---
+
+# 19. REST API
+
+Use REST APIs.
+
+Suggested routes:
+
+```text
+/api/auth
+/api/users
+/api/profile
+/api/circles
+/api/circles/:id
+/api/circles/:id/members
+/api/circles/:id/join-requests
+/api/circles/:id/tasks
+/api/tasks
+/api/my-tasks
+/api/notifications
+```
+
+Implement proper:
+
+```text
+GET
+POST
+PUT/PATCH
+DELETE
+```
+
+where appropriate.
+
+Use appropriate status codes:
+
+```text
+200
+201
+400
+401
+403
+404
+409
+500
+```
+
+Use consistent JSON responses.
+
+Example:
+
+```json
+{
+  "success": true,
+  "data": {}
+}
+```
+
+Error:
+
+```json
+{
+  "success": false,
+  "message": "Task not found"
+}
+```
+
+---
+
+# 20. Fetch API Only
+
+The frontend must use native browser `fetch()`.
+
+Example:
+
+```js
+fetch(`${API_URL}/api/tasks`, {
+  credentials: "include"
+});
+```
+
+POST:
+
+```js
+fetch(`${API_URL}/api/tasks`, {
+  method: "POST",
+  credentials: "include",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify(data)
+});
+```
+
+Create a reusable API helper if useful.
+
+Do not install Axios.
+
+---
+
+# 21. Frontend Authentication
+
+The frontend must not implement token authentication.
+
+Authentication state should be determined by calling a backend endpoint such as:
+
+```text
+GET /api/auth/me
+```
+
+Use:
+
+```text
+credentials: "include"
+```
+
+for authenticated requests.
+
+Implement:
+
+* Loading state
+* Authenticated state
+* Unauthenticated state
+* Protected routes
+* Logout
+
+Logout should destroy the server-side session.
+
+---
+
+# 22. Frontend UI
+
+Use plain CSS only.
+
+Create a clean, modern, responsive interface.
+
+Do not use:
+
+```text
+Tailwind
+Bootstrap
+Material UI
+Chakra
+CSS-in-JS
+```
+
+Use regular CSS files.
+
+Suggested:
+
+```text
+frontend/src/styles/
+├── global.css
+├── auth.css
+├── dashboard.css
+├── circles.css
+├── tasks.css
+├── profile.css
+└── notifications.css
+```
+
+The interface should work on:
+
+* Desktop
+* Tablet
+* Mobile
+
+---
+
+# 23. Suggested Frontend Structure
+
+```text
+frontend/
+├── public/
+├── src/
+│   ├── components/
+│   ├── pages/
+│   ├── layouts/
+│   ├── context/
+│   ├── hooks/
+│   ├── services/
+│   ├── utils/
+│   ├── styles/
+│   ├── App.jsx
+│   └── main.jsx
+├── Dockerfile
+├── nginx.conf
+├── package.json
+└── vite.config.js
+```
+
+---
+
+# 24. Suggested Backend Structure
+
+```text
+backend/
+├── src/
+│   ├── config/
+│   │   ├── db.js
+│   │   └── redis.js
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── circleController.js
+│   │   ├── taskController.js
+│   │   └── notificationController.js
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── circleRoutes.js
+│   │   ├── taskRoutes.js
+│   │   └── notificationRoutes.js
+│   ├── middleware/
+│   │   ├── authenticate.js
+│   │   └── authorize.js
+│   ├── services/
+│   │   ├── googleAuth.js
+│   │   ├── taskService.js
+│   │   └── notificationService.js
+│   ├── queries/
+│   │   ├── users.js
+│   │   ├── circles.js
+│   │   ├── memberships.js
+│   │   ├── tasks.js
+│   │   └── notifications.js
+│   ├── jobs/
+│   │   └── deadlineReminder.js
+│   └── server.js
+├── migrations/
+├── Dockerfile
+└── package.json
+```
+
+---
+
+# 25. Docker — Backend
+
+Create a production-ready backend Dockerfile.
+
+Requirements:
+
+* Use a production Node.js image
+* Install production dependencies correctly
+* Do not include unnecessary development files
+* Use the Render-provided `PORT`
+* Listen on:
+
+```text
+0.0.0.0
+```
+
+The server must NOT hardcode:
+
+```text
+localhost
+```
+
+for its production listening address.
+
+Example requirement:
+
+```js
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, "0.0.0.0");
+```
+
+The Docker container must start using a real package.json script.
+
+Example:
+
+```text
+npm start
+```
+
+---
+
+# 26. Docker — Frontend
+
+Use a multi-stage Docker build.
+
+Stage 1:
+
+```text
+Node
+```
+
+Build the React/Vite application.
+
+Stage 2:
+
+```text
+Nginx
+```
+
+Serve the generated static files.
+
+Configure Nginx correctly for React Router so routes such as:
+
+```text
+/dashboard
+/circles
+/tasks
+/profile
+```
+
+do not return 404 after refreshing the page.
+
+Example Nginx behavior:
+
+```text
+try_files $uri $uri/ /index.html;
+```
+
+The frontend container must listen on the port expected by the Render configuration.
+
+Do not hardcode a production API URL into source code.
+
+Use the appropriate Vite environment variable during build.
+
+---
+
+# 27. Render Deployment — MUST BE READY
+
+This is a mandatory requirement.
+
+The final project must be **ready to deploy on Render without structural changes**.
+
+Deploy as two Render Web Services:
+
+```text
+TaskCircle Frontend
+TaskCircle Backend
+```
+
+Both must use Docker.
+
+---
+
+# 28. Render Backend Configuration
+
+The backend Docker container must:
+
+* Build successfully
+* Start successfully
+* Listen on Render's `PORT`
+* Bind to `0.0.0.0`
+* Use environment variables
+* Connect to Neon PostgreSQL
+* Connect to managed Redis
+* Create Redis-backed sessions
+* Run the scheduler
+* Handle health checks
+
+Create a health endpoint:
+
+```text
+GET /health
+```
+
+Response:
+
+```json
+{
+  "success": true,
+  "message": "TaskCircle backend is healthy"
+}
+```
+
+The backend must return a successful response from this endpoint after startup.
+
+---
+
+# 29. Render Frontend Configuration
+
+The frontend Docker image must:
+
+1. Install dependencies
+2. Build the React application
+3. Serve it using Nginx
+4. Support React Router
+5. Use the configured backend API URL
+6. Work over HTTPS
+
+The production frontend API URL must be configurable through:
+
+```env
+VITE_API_URL=
+```
+
+Do not hardcode:
+
+```text
+http://localhost:5000
+```
+
+into production code.
+
+---
+
+# 30. Render Environment Variables
+
+Document every required Render environment variable.
+
+Backend:
+
+```env
+NODE_ENV=production
+PORT=
+DATABASE_URL=
+REDIS_URL=
+SESSION_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=
+FRONTEND_URL=
+```
+
+Frontend:
+
+```env
+VITE_API_URL=
+```
+
+Explain exactly which variables belong to:
+
+```text
+Frontend Render service
+Backend Render service
+```
+
+Never expose:
+
+```text
+DATABASE_URL
+REDIS_URL
+SESSION_SECRET
+GOOGLE_CLIENT_SECRET
+```
+
+to the frontend.
+
+---
+
+# 31. CORS
+
+Configure CORS correctly for:
+
+```text
+local development
+```
+
+and:
+
+```text
+Render production frontend
+```
+
+The backend must allow the configured frontend origin.
+
+When using cookie-based sessions, configure credentials correctly.
+
+Do not use:
+
+```text
+Access-Control-Allow-Origin: *
+```
+
+with credentialed requests.
+
+---
+
+# 32. Session Cookie Production Configuration
+
+Make sure cookies work between the Render frontend and backend.
+
+Configure:
+
+```text
+httpOnly
+secure
+sameSite
+```
+
+appropriately for production HTTPS.
+
+Do not expose session identifiers to JavaScript.
+
+Do not store sessions in memory.
+
+Do not use JWT as a workaround.
+
+---
+
+# 33. Security
+
+Use:
+
+```text
+Helmet
+CORS
+express-rate-limit
+secure cookies
+parameterized SQL
+server-side authorization
+input validation
+file upload validation
+```
+
+Implement centralized error handling.
+
+Do not expose production stack traces.
+
+Do not commit secrets.
+
+Validate uploaded files and enforce file size limits.
+
+Use safe filenames for uploaded profile images.
+
+---
+
+# 34. Profile Images
+
+Use Multer where profile image uploads are implemented.
+
+Validate:
+
+* MIME type
+* File extension
+* File size
+
+Do not allow arbitrary executable uploads.
+
+The implementation should be structured so storage can later be moved to object storage.
+
+---
+
+# 35. Environment Files
+
+The repository MUST contain:
+
+```text
+.env.example
+.gitignore
+README.md
+```
+
+The root `.env.example` must contain all required environment variables without real secrets.
+
+Example:
+
+```env
+NODE_ENV=development
+PORT=5000
+DATABASE_URL=
+REDIS_URL=
+SESSION_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+FRONTEND_URL=http://localhost:5173
+```
+
+Frontend:
+
+```env
+VITE_API_URL=http://localhost:5000
+```
+
+Never put secrets inside Vite variables.
+
+---
+
+# 36. .gitignore
+
+Include at minimum:
+
+```text
+node_modules/
+.env
+.env.*
+!.env.example
+
+dist/
+build/
+coverage/
+
+.DS_Store
+
+npm-debug.log*
+*.log
+```
+
+Make sure `.env.example` remains committed.
+
+---
+
+# 37. README.md
+
+Create a complete production-quality README.
+
+It must contain:
+
+## Project Overview
+
+Explain TaskCircle.
+
+## Features
+
+List all major features.
+
+## Architecture
+
+Explain:
+
+```text
+React
+ ↓
+Express
+ ↓
+PostgreSQL
+Redis
+Google OAuth
+node-cron
+```
+
+## Tech Stack
+
+List the exact technologies actually used.
+
+## Folder Structure
+
+Explain the repository structure.
+
+## Prerequisites
+
+Explain required software/accounts.
+
+## Local Setup
+
+Include exact commands.
+
+For example:
+
+```bash
+git clone <repository>
+cd taskcircle
+npm install
+```
+
+Use commands that actually match the generated project.
+
+## Environment Setup
+
+Explain `.env`.
+
+## Google OAuth Setup
+
+Give complete setup instructions.
+
+## PostgreSQL Setup
+
+Explain Neon.
+
+## Redis Setup
+
+Explain managed Redis.
+
+## Database Migrations
+
+Explain:
+
+```bash
+npm run migrate
+```
+
+or the actual command implemented.
+
+## Running Locally
+
+Explain how to start:
+
+```text
+backend
+frontend
+```
+
+## Docker Development
+
+Explain how to build and run containers.
+
+## Production Docker Build
+
+Include exact commands.
+
+## Render Deployment
+
+Give step-by-step instructions for:
+
+1. Creating backend Render service
+2. Creating frontend Render service
+3. Setting Docker configuration
+4. Setting environment variables
+5. Configuring health check
+6. Configuring Google OAuth callback
+7. Connecting Neon
+8. Connecting Redis
+9. Deploying
+10. Verifying the deployment
+
+## API Documentation
+
+List the major endpoints.
+
+## Authentication
+
+Explain Google OAuth + Redis sessions.
+
+## Scheduler
+
+Explain the 09:00 and 17:00 IST jobs.
+
+## Security
+
+Document security practices.
+
+## Troubleshooting
+
+Include common problems such as:
+
+* Google OAuth redirect mismatch
+* CORS errors
+* Session cookie problems
+* Redis connection errors
+* PostgreSQL connection errors
+* Render port errors
+* React Router refresh 404
+* Docker build errors
+
+---
+
+# 38. Root Repository Structure
+
+Prefer this structure:
+
+```text
+taskcircle/
+├── frontend/
+├── backend/
+├── .env.example
+├── .gitignore
+├── README.md
+└── docker-compose.yml
+```
+
+If Docker Compose is included, it should be usable for local development.
+
+Do not include unnecessary files.
+
+---
+
+# 39. Docker Compose
+
+Create a useful local development configuration if appropriate.
+
+It may include:
+
+```text
+frontend
+backend
+postgres
+redis
+```
+
+However, production deployment must use:
+
+```text
+Neon PostgreSQL
+Managed Redis
+Render Docker services
+```
+
+Do not require Render to run PostgreSQL or Redis containers.
+
+---
+
+# 40. Production Configuration Rules
+
+Before considering the project complete, verify all of these:
+
+### Backend
+
+* [ ] Uses JavaScript only
+* [ ] Uses Express
+* [ ] Uses `pg`
+* [ ] Uses PostgreSQL
+* [ ] Uses Redis
+* [ ] Uses express-session
+* [ ] Uses Google OAuth
+* [ ] No JWT
+* [ ] No OTP
+* [ ] No passwords
+* [ ] No Prisma
+* [ ] No ORM
+* [ ] Uses native server-side Node APIs where appropriate
+* [ ] Uses `PORT`
+* [ ] Listens on `0.0.0.0`
+* [ ] Has `/health`
+* [ ] Handles production errors
+* [ ] Has CORS configured
+* [ ] Has Helmet
+* [ ] Has rate limiting
+
+### Frontend
+
+* [ ] Uses JavaScript/JSX only
+* [ ] Uses React
+* [ ] Uses Vite
+* [ ] Uses React Router
+* [ ] Uses native Fetch
+* [ ] No Axios
+* [ ] No TypeScript
+* [ ] No Tailwind
+* [ ] Uses plain CSS
+* [ ] Production Docker build works
+* [ ] Nginx serves the application
+* [ ] React Router fallback works
+* [ ] API URL is configurable
+
+### Authentication
+
+* [ ] Google OAuth works
+* [ ] Redis sessions work
+* [ ] HTTP-only cookies are used
+* [ ] No JWT
+* [ ] No localStorage auth tokens
+* [ ] Logout destroys session
+
+### Database
+
+* [ ] PostgreSQL works
+* [ ] Neon-compatible
+* [ ] Migrations exist
+* [ ] Migration command works
+* [ ] Parameterized SQL is used
+* [ ] Foreign keys exist
+* [ ] Useful indexes exist
+
+### Redis
+
+* [ ] Production uses managed Redis
+* [ ] `REDIS_URL` is configurable
+* [ ] Sessions use Redis
+* [ ] No production memory store
+
+### Docker
+
+* [ ] Backend Dockerfile works
+* [ ] Frontend Dockerfile works
+* [ ] Frontend uses multi-stage build
+* [ ] Nginx configuration works
+* [ ] Containers start successfully
+* [ ] No hardcoded localhost production configuration
+
+### Render
+
+* [ ] Backend is deployable as a Render Web Service
+* [ ] Frontend is deployable as a Render Web Service
+* [ ] Both use Docker
+* [ ] Backend uses Render `PORT`
+* [ ] Backend health check works
+* [ ] Frontend can communicate with backend
+* [ ] CORS works
+* [ ] Cookies work over HTTPS
+* [ ] Google OAuth callback uses production URL
+* [ ] Neon connection works
+* [ ] Redis connection works
+
+### Repository
+
+* [ ] `.env.example` exists
+* [ ] `.gitignore` exists
+* [ ] `README.md` exists
+* [ ] No secrets are committed
+* [ ] No unnecessary generated files
+* [ ] All package scripts actually exist
+* [ ] All README commands match the project
+* [ ] No broken imports
+* [ ] No unused fake configuration
+* [ ] No placeholder implementation presented as complete
+
+---
+
+# 41. Final Verification Requirement
+
+Before delivering the project, perform a complete consistency check.
+
+Verify:
+
+```text
+package.json
+        ↓
+Dockerfile
+        ↓
+source code
+        ↓
+environment variables
+        ↓
+database migrations
+        ↓
+Redis configuration
+        ↓
+Google OAuth
+        ↓
+CORS
+        ↓
+session cookies
+        ↓
+Render configuration
+        ↓
+README commands
+```
+
+Everything must agree with everything else.
+
+For example:
+
+If the README says:
+
+```bash
+npm run migrate
+```
+
+then `package.json` must actually contain:
+
+```json
+{
+  "scripts": {
+    "migrate": "..."
+  }
+}
+```
+
+If the backend expects:
+
+```env
+REDIS_URL
+```
+
+then the Redis configuration must actually read:
+
+```js
+process.env.REDIS_URL
+```
+
+If the frontend expects:
+
+```env
+VITE_API_URL
+```
+
+then the frontend code must actually use that variable.
+
+If Render provides:
+
+```text
+PORT
+```
+
+the backend must actually use it.
+
+[OIf React Router is used, Nginx must actually provide the SPA fallback.
+
+If Google OAuth uses:
+
+```text
+/api/auth/google/callback
+```
+
+the README and Google Cloud configuration must use the same callback path.
+
+---
+
+# 42. Final Deployment Test
+
+The completed project should be tested as if it were being deployed to Render.
+
+At minimum verify:
+
+```text
+npm install
+npm run build
+npm run migrate
+docker build
+docker run
+```
+
+for the relevant services.
+
+Check that:
+
+```text
+GET /health
+```
+
+works.
+
+Check that:
+
+```text
+Google login
+→ OAuth callback
+→ session creation
+→ Redis session
+→ authenticated API request
+```
+
+works conceptually and that all configuration required for the flow is present.
+
+Check:
+
+```text
+Frontend
+→ Fetch API
+→ Backend
+→ PostgreSQL
+```
+
+and:
+
+```text
+Backend
+→ Redis
+→ Session
+```
+
+and:
+
+```text
+node-cron
+→ PostgreSQL
+→ Notifications
+```
+
+---
+
+# 43. Important Final Rule
+
+Do not replace any required technology with another technology.
+
+The final application MUST use:
+
+```text
+React
+Vite
+JavaScript
+Plain CSS
+Fetch API
+React Router
+
+Node.js
+Express
+pg
+PostgreSQL
+Redis
+express-session
+Google OAuth
+node-cron
+
+Docker
+Nginx
+Render
+Neon PostgreSQL
+Managed Redis
+```
+
+And MUST NOT use:
+
+```text
+TypeScript
+Axios
+Tailwind
+Prisma
+ORMs
+JWT
+OTP
+password authentication
+MongoDB
+Firebase Authentication
+Supabase Authentication
+```
+
+The final result must be a **complete, consistent, production-ready TaskCircle application that can be Dockerized and deployed to Render for frontend and backend without requiring architectural changes after generation.**
+
