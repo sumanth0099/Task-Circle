@@ -1,26 +1,29 @@
-# Stage 1: Build the Vite frontend
+# ─── Stage 1: Build the Vite frontend ───────────────────────────────────────
 FROM node:20-alpine AS frontend-build
 WORKDIR /app/frontend
-# Copy package files and install dependencies
+
 COPY frontend/package*.json ./
 RUN npm ci
-# Copy the rest of the frontend source
+
 COPY frontend/ ./
-# Build the frontend (VITE_API_URL should be relative for single-origin)
+
+# Empty string means API calls go to the same origin (no CORS needed)
 ENV VITE_API_URL=""
 RUN npm run build
 
-# Stage 2: Build the Node.js backend and serve the application
+# ─── Stage 2: Backend + serve built frontend ─────────────────────────────────
 FROM node:20-alpine
 WORKDIR /app
-# Copy backend package files and install dependencies
+
 COPY backend/package*.json ./
 RUN npm ci --omit=dev
-# Copy the rest of the backend source
+
 COPY backend/ ./
-# Copy the built frontend files from the first stage into a public folder
+
+# Copy the compiled React app into /app/public so Express can serve it
 COPY --from=frontend-build /app/frontend/dist ./public
 
-# Expose port 5000 (Render provides PORT environment variable at runtime)
+# Render injects $PORT at runtime; we expose 5000 as the fallback default
 EXPOSE 5000
-CMD ["npm", "start"]
+
+CMD ["node", "src/server.js"]

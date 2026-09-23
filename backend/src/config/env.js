@@ -4,7 +4,6 @@ dotenv.config();
 
 const requiredVars = [
   'NODE_ENV',
-  'PORT',
   'DATABASE_URL',
   'REDIS_URL',
   'SESSION_SECRET',
@@ -33,7 +32,7 @@ if (process.env.GROQ_MODEL) {
 
 export const env = {
   nodeEnv: process.env.NODE_ENV,
-  port: Number(process.env.PORT),
+  port: Number(process.env.PORT) || 5000,
   databaseUrl: process.env.DATABASE_URL,
   redisUrl: process.env.REDIS_URL,
   sessionSecret: process.env.SESSION_SECRET,
@@ -44,3 +43,4 @@ export const env = {
   groqApiKey: process.env.GROQ_API_KEY || null,
   groqModel: process.env.GROQ_MODEL || GROQ_MODEL_DEFAULT
 };
+
