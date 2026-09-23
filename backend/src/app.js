@@ -30,7 +30,8 @@ app.set('trust proxy', 1);
 
 app.use(helmet());
 
-const allowedOrigins = env.frontendUrl.split(',').map((origin) => origin.trim());
+// Safely handle missing FRONTEND_URL so the server still starts without env vars set
+const allowedOrigins = (env.frontendUrl || '').split(',').map((origin) => origin.trim()).filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -66,7 +67,8 @@ const sessionStore = new RedisStore({
 app.use(session({
   store: sessionStore,
   name: 'taskcircle.sid',
-  secret: env.sessionSecret,
+  // Fallback secret prevents express-session from throwing when SESSION_SECRET isn't set yet
+  secret: env.sessionSecret || 'temporary-insecure-secret-set-SESSION_SECRET-env-var',
   saveUninitialized: false,
   resave: false,
   cookie: {
