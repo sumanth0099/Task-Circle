@@ -13,10 +13,14 @@ const requiredVars = [
   'FRONTEND_URL'
 ];
 
-for (const variable of requiredVars) {
-  if (!process.env[variable]) {
-    throw new Error(`Missing required environment variable: ${variable}`);
-  }
+const missingVars = requiredVars.filter((v) => !process.env[v]);
+if (missingVars.length > 0) {
+  // Log clearly but don't throw — let the HTTP server start so static files
+  // (CSS/JS) are still served. API routes will fail gracefully until env vars
+  // are configured in the Render dashboard and the service is redeployed.
+  console.error('[CONFIG ERROR] Missing required environment variables:');
+  missingVars.forEach((v) => console.error(`  - ${v}`));
+  console.error('API routes will not function until these are set on Render.');
 }
 
 if (!process.env.GROQ_API_KEY) {
