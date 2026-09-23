@@ -20,22 +20,23 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://taskcircle.onrender.com # Change this if you use a custom domain
+        value: https://task-circle-klmh.onrender.com
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_CALLBACK_URL
-        value: https://taskcircle.onrender.com/api/auth/google/callback
+        value: https://task-circle-klmh.onrender.com/api/auth/google/callback
       - key: GROQ_API_KEY
         sync: false
+
+  # Redis Cache / Session Store
+  - type: redis
+    name: taskcircle-redis
+    plan: free
 
 databases:
   - name: taskcircle-db
     plan: free
     databaseName: taskcircle
     user: taskcircle_user
-
-  - type: redis
-    name: taskcircle-redis
-    plan: free
