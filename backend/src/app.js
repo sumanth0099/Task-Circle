@@ -96,9 +96,16 @@ app.use('/api/my-tasks', myTaskRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
 
+import fs from 'fs';
+
 // SPA catch-all: return index.html for any unmatched route (React Router handles it)
 app.get(/\/.*/, (req, res) => {
-  res.sendFile(path.join(publicPath, 'index.html'));
+  const indexPath = path.join(publicPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('Frontend not built or public folder is empty. Run npm run build.');
+  }
 });
 
 app.use(errorHandler);

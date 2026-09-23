@@ -1,0 +1,9 @@
+{
+  "name": "taskcircle-root",
+  "version": "1.0.0",
+  "description": "Root package.json for Render deployment",
+  "scripts": {
+    "build": "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix backend && rm -rf backend/public && cp -r frontend/dist backend/public",
+    "start": "npm start --prefix backend"
+  }
+}
