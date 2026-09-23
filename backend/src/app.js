@@ -89,15 +89,13 @@ app.use('/api/my-tasks', myTaskRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
 
-// Serve frontend static files in production
-if (env.nodeEnv === 'production') {
-  const publicPath = path.join(__dirname, '../public');
-  app.use(express.static(publicPath));
-  
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(publicPath, 'index.html'));
-  });
-}
+// Serve frontend static files
+const publicPath = path.join(__dirname, '../public');
+app.use(express.static(publicPath));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(publicPath, 'index.html'));
+});
 
 app.use(errorHandler);
 
