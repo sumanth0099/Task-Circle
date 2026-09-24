@@ -64,7 +64,7 @@ const sessionStore = new RedisStore({
   prefix: 'taskcircle:'
 });
 
-app.use(session({
+export const sessionMiddleware = session({
   store: sessionStore,
   name: 'taskcircle.sid',
   // Fallback secret prevents express-session from throwing when SESSION_SECRET isn't set yet
@@ -77,10 +77,14 @@ app.use(session({
     sameSite: env.nodeEnv === 'production' ? 'none' : 'lax',
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
-}));
+});
 
+// Exported so the WebSocket server can reuse session+passport for WS auth
+export const passportSession = passport.session();
+
+app.use(sessionMiddleware);
 app.use(passport.initialize());
-app.use(passport.session());
+app.use(passportSession);
 app.use(csrfMiddleware);
 
 // Health check endpoint (Render uses this to verify service is up)

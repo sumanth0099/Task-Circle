@@ -1,0 +1,56 @@
+=========================================
+TASKCIRCLE: PROJECT EXPLANATION
+=========================================
+
+1. WHAT IS THIS PROJECT?
+-----------------------------------------
+TaskCircle is a collaborative, full-stack task management web application designed to help teams organize, track, and accomplish their work efficiently. Unlike simple to-do lists, it allows users to group their work into dedicated, isolated workspaces called "Circles". Each Circle has its own privacy settings and role-based access controls (Admin, Moderator, Member). 
+
+To boost productivity, the project features an integrated AI assistant to help teams break down complex objectives, as well as an automated notification engine to remind users of impending or missed task deadlines.
+
+2. HOW THIS PROJECT WORKS
+-----------------------------------------
+* Authentication: Users sign in securely without passwords using their Google accounts (via Google OAuth 2.0).
+* Workspaces (Circles): Once logged in, users can create new Circles or join existing ones using a unique 8-character invite code. They can also request to join private Circles.
+* Task Management: Inside a Circle, authorized members can create tasks, assign them to specific team members, set priorities (Low/Medium/High), define due dates, and update statuses (Todo, In Progress, Completed). Users can also see a global "My Tasks" view to track everything assigned to them across all their Circles.
+* AI Assistant: Users can chat with a built-in AI assistant powered by Groq (using the Llama 3.1 model). The AI can help brainstorm ideas and break down large project goals into smaller, actionable tasks.
+* Automated Reminders: The system runs automated background jobs every day to check for tasks that are due today, due tomorrow, or overdue. It then generates in-app notifications based on each user's personal alert preferences.
+
+3. WHAT IS THE FLOW (DATA & ARCHITECTURE FLOW)
+-----------------------------------------
+The application follows a modern Client-Server REST API architecture:
+
+* User Interaction: The user clicks a button or submits a form on the React frontend (Single Page Application).
+* Request Routing: The React app sends an HTTP request (REST API call) to the Node.js/Express backend.
+* Security & Middleware: The backend receives the request. Middleware checks for a valid session cookie. Sessions are managed by Passport.js and securely stored in Redis memory for high performance.
+* Business Logic: The request reaches the respective route (e.g., circleRoutes, taskRoutes, chatRoutes). The service logic determines what needs to be done.
+* Data Layer: The backend executes SQL queries against the PostgreSQL database using a connection pool to fetch, insert, or update data.
+* Response: The backend returns a JSON response to the frontend. React then updates the UI state so the user sees the changes instantly.
+* Background Flow: Completely separate from user interactions, a `node-cron` scheduler runs daily on the backend server. It scans the PostgreSQL database for deadlines, calculates who needs to be reminded, and inserts alerts into the `notifications` table. When the user logs in or refreshes, the frontend fetches these unread notifications.
+
+4. WHAT TECHNOLOGIES ARE USED FOR THIS PROJECT?
+-----------------------------------------
+Frontend (Client-Side):
+* React 19: UI component library.
+* Vite: Fast build tool and development server.
+* React Router DOM: For handling client-side page navigation.
+* Vanilla CSS: For clean, custom styling without heavy frameworks.
+
+Backend (Server-Side):
+* Node.js & Express.js: The core server and REST API framework.
+* Passport.js: Handles the complex Google OAuth 2.0 authentication flow.
+* node-cron: Runs scheduled background tasks for notifications.
+* multer: For handling any file/multipart form data uploads if present.
+
+Databases:
+* PostgreSQL: The primary relational database storing users, circles, tasks, memberships, and notifications.
+* Redis: An in-memory data store used specifically to handle and cache user login sessions securely and rapidly.
+
+External APIs:
+* Google OAuth 2.0 API: For secure, passwordless authentication.
+* Groq AI API (Llama 3.1): For powering the integrated AI chat assistant.
+
+DevOps & Deployment:
+* Docker & Docker Compose: Containerizes both the frontend and backend so they can be easily run in any environment.
+* Nginx: Used as a reverse proxy web server to serve the built React frontend in production.
+* Render.com Configuration: Includes a `render.yaml` file indicating the project is configured for cloud deployment on the Render platform.

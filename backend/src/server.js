@@ -1,9 +1,20 @@
-import app from './app.js';
+import app, { sessionMiddleware, passportSession } from './app.js';
 import { env } from './config/env.js';
 import { redisClient } from './db/redis.js';
 import { pool } from './db/pool.js';
 import { runMigrations } from './db/migrate.js';
 import { startNotificationScheduler } from './services/notificationsScheduler.js';
+import { initGroupChat } from './services/groupChat.js';
+import passport from './config/passport.js';
+
+// Combined session+passport parser for WebSocket upgrade requests
+const wsSessionParser = (req, res, next) => {
+  sessionMiddleware(req, res, () => {
+    passport.initialize()(req, res, () => {
+      passportSession(req, res, next);
+    });
+  });
+};
 
 const start = async () => {
   // Start HTTP server FIRST so static assets (CSS/JS) are always reachable,
@@ -11,6 +22,9 @@ const start = async () => {
   const server = app.listen(env.port, '0.0.0.0', () => {
     console.log(`TaskCircle backend running on port ${env.port}`);
   });
+
+  // Attach WebSocket group chat server to the same HTTP server
+  initGroupChat(server, wsSessionParser);
 
   try {
     console.log('Connecting to Redis...');

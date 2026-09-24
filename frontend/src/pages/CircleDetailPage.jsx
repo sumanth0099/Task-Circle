@@ -2,10 +2,12 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../api/client';
 import StatusBlock from '../components/StatusBlock';
+import GroupChat from '../components/GroupChat';
 
-export default function CircleDetailPage() {
+export default function CircleDetailPage({ user }) {
   const { circleId } = useParams();
   const navigate = useNavigate();
+  const [chatOpen, setChatOpen] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -317,6 +319,28 @@ export default function CircleDetailPage() {
           </div>
         </div>
       </StatusBlock>
+
+      {/* ── Floating group chat button ── */}
+      <button
+        id="group-chat-toggle-btn"
+        className={`group-chat-fab ${chatOpen ? 'group-chat-fab--active' : ''}`}
+        onClick={() => setChatOpen((v) => !v)}
+        title={chatOpen ? 'Close group chat' : 'Open group chat'}
+        aria-label={chatOpen ? 'Close group chat' : 'Open group chat'}
+      >
+        {chatOpen ? '✕' : '💬'}
+        {!chatOpen && <span className="group-chat-fab-label">Group Chat</span>}
+      </button>
+
+      {/* ── Group chat panel ── */}
+      {chatOpen && circle && (
+        <GroupChat
+          circleId={circleId}
+          circleName={circle.name}
+          currentUserId={user?.id}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </div>
   );
 }
