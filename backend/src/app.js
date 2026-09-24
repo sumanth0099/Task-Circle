@@ -28,7 +28,22 @@ const app = express();
 // Trust first proxy — required for Render (behind a load balancer)
 app.set('trust proxy', 1);
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],   // Vite inlines a small bootstrap chunk
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      // Allow Google avatars (OAuth profile pictures)
+      imgSrc: ["'self'", 'data:', 'https://lh3.googleusercontent.com', 'https://lh4.googleusercontent.com', 'https://lh5.googleusercontent.com', 'https://lh6.googleusercontent.com'],
+      // Allow WebSocket connections to same host (wss: in prod, ws: in dev)
+      connectSrc: ["'self'", 'wss:', 'ws:', 'https://api.groq.com'],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: []
+    }
+  }
+}));
 
 // Safely handle missing FRONTEND_URL so the server still starts without env vars set
 const allowedOrigins = (env.frontendUrl || '').split(',').map((origin) => origin.trim()).filter(Boolean);

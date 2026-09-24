@@ -31,8 +31,18 @@ export default function GroupChat({ circleId, circleName, currentUserId, onClose
 
   // Connect WebSocket
   useEffect(() => {
-    const wsBase = apiUrl.replace(/^http/, 'ws');
-    const ws = new WebSocket(`${wsBase}/ws/circles/${circleId}`);
+    // In production the frontend & backend share the same origin, so apiUrl may be
+    // empty or relative. Fall back to window.location to build the correct ws(s):// URL.
+    const getWsBase = () => {
+      if (apiUrl && apiUrl.startsWith('http')) {
+        return apiUrl.replace(/^http/, 'ws');
+      }
+      // Same-origin: use the page's own host
+      const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      return `${proto}://${window.location.host}`;
+    };
+
+    const ws = new WebSocket(`${getWsBase()}/ws/circles/${circleId}`);
     wsRef.current = ws;
 
     ws.onopen = () => {
