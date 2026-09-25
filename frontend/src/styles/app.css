@@ -1840,3 +1840,237 @@ textarea { resize: vertical; min-height: 80px; }
 .group-chat-send:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
 
 
+/* =============================================
+   Circle Data Page
+   ============================================= */
+
+/* Intro paragraph */
+.circle-data-intro {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 0.25rem;
+}
+
+/* List of circle rows */
+.circle-data-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+/* Single circle row */
+.circle-data-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  animation: slide-in 0.25s ease both;
+}
+
+.circle-data-row:hover {
+  border-color: var(--border-accent);
+  background: rgba(108, 99, 255, 0.06);
+}
+
+/* Left section: icon + info */
+.circle-data-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Smaller variant of the circle icon */
+.circle-icon--sm {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--grad-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
+}
+
+/* Circle name */
+.circle-data-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  margin-bottom: 0.3rem;
+  word-break: break-word;
+}
+
+/* Badge row beneath name */
+.circle-data-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* Per-circle download error */
+.circle-data-error {
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--accent-red);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.4;
+}
+
+/* ─── Download CSV button ──────────────────────────────────────────────── */
+.btn-download-csv {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  background: rgba(108, 99, 255, 0.15);
+  border: 1px solid rgba(108, 99, 255, 0.35);
+  border-radius: var(--radius-sm);
+  color: #a89fff;
+  font-family: var(--font-base);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 130px;
+  justify-content: center;
+}
+
+.btn-download-csv:hover:not(:disabled) {
+  background: rgba(108, 99, 255, 0.28);
+  border-color: rgba(108, 99, 255, 0.6);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(108, 99, 255, 0.25);
+}
+
+.btn-download-csv:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-download-csv:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn-download-csv--loading {
+  background: rgba(108, 99, 255, 0.1);
+  border-color: rgba(108, 99, 255, 0.2);
+}
+
+/* Suppress global button ripple on this button */
+.btn-download-csv::after { display: none; }
+
+/* ─── Inline spinner inside the download button ──────────────────────── */
+.btn-spinner {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(168, 159, 255, 0.3);
+  border-top-color: #a89fff;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+  flex-shrink: 0;
+}
+
+/* ─── Info grid (What's included) ────────────────────────────────────── */
+.circle-data-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.circle-data-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.9rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+
+.circle-data-info-item:hover {
+  border-color: var(--border-accent);
+  background: rgba(108, 99, 255, 0.05);
+}
+
+.circle-data-info-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.circle-data-info-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ─── Responsive — Tablet (≤ 900px) ─────────────────────────────────── */
+@media (max-width: 900px) {
+  .circle-data-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Responsive — Mobile (≤ 600px) ─────────────────────────────────── */
+@media (max-width: 600px) {
+  /* Stack the download button below circle info */
+  .circle-data-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+  }
+
+  /* Button fills full width for easy tapping */
+  .btn-download-csv {
+    width: 100%;
+    min-width: unset;
+    justify-content: center;
+    padding: 0.65rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  /* Slightly tighter name font on phones */
+  .circle-data-name {
+    font-size: 0.9rem;
+  }
+
+  /* Info grid goes single column already via tablet rule */
+}
+
+/* ─── Responsive — Very small (≤ 380px) ─────────────────────────────── */
+@media (max-width: 380px) {
+  .circle-data-left {
+    gap: 0.65rem;
+  }
+
+  .circle-icon--sm {
+    width: 34px;
+    height: 34px;
+    font-size: 0.95rem;
+  }
+}
+

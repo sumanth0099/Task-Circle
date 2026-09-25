@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { to: '/app', icon: '⊞', label: 'Dashboard', exact: true },
   { to: '/app/my-tasks', icon: '✓', label: 'My Tasks' },
   { to: '/app/notifications', icon: '🔔', label: 'Notifications', badge: true },
+  { to: '/app/circle-data', icon: '📊', label: 'Circle Data' },
   { to: '/app/profile', icon: '◉', label: 'Profile' },
 ];
 

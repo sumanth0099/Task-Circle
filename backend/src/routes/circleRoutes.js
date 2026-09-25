@@ -456,4 +456,203 @@ router.post(
   })
 );
 
+// ─── Helper: escape a CSV cell value safely ───────────────────────────────────
+function csvCell(value) {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  // Wrap in quotes if the value contains a comma, double-quote, or newline
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+function csvRow(cells) {
+  return cells.map(csvCell).join(',');
+}
+
+function formatDate(val) {
+  if (!val) return '';
+  try {
+    return new Date(val).toISOString().split('T')[0]; // YYYY-MM-DD
+  } catch {
+    return String(val);
+  }
+}
+
+// GET /api/circles/:circleId/data/export — download a CSV report for a circle
+router.get(
+  '/:circleId/data/export',
+  requireAuth,
+  param('circleId').isInt({ min: 1 }).withMessage('circleId must be a positive integer'),
+  handleValidation,
+  asyncHandler(async (req, res) => {
+    const circleId = Number(req.params.circleId);
+    const userId = req.user.id;
+
+    // 1. Verify circle exists
+    const circleResult = await pool.query(
+      'SELECT id, name, code, privacy FROM circles WHERE id = $1',
+      [circleId]
+    );
+    if (!circleResult.rowCount) throw new AppError('Circle not found', 404);
+    const circle = circleResult.rows[0];
+
+    // 2. Verify the requesting user is an active member
+    const membershipResult = await pool.query(
+      `SELECT role FROM memberships WHERE circle_id = $1 AND user_id = $2 AND status = 'ACTIVE'`,
+      [circleId, userId]
+    );
+    if (!membershipResult.rowCount) throw new AppError('Access denied', 403);
+
+    // 3. Fetch all tasks for this circle with creator and assignee names
+    const tasksResult = await pool.query(
+      `SELECT
+         t.id,
+         t.title,
+         t.description,
+         t.priority,
+         t.status,
+         t.due_date,
+         t.created_at,
+         t.assignment_group_id,
+         cb.name  AS creator_name,
+         ab.name  AS assignee_name,
+         ab.id    AS assignee_id
+       FROM tasks t
+       LEFT JOIN users cb ON cb.id = t.created_by
+       LEFT JOIN users ab ON ab.id = t.assigned_to
+       WHERE t.circle_id = $1
+       ORDER BY t.created_at ASC`,
+      [circleId]
+    );
+    const tasks = tasksResult.rows;
+
+    // 4. Fetch all active members for member-level stats
+    const membersResult = await pool.query(
+      `SELECT u.id, u.name, m.role
+       FROM memberships m
+       JOIN users u ON u.id = m.user_id
+       WHERE m.circle_id = $1 AND m.status = 'ACTIVE'
+       ORDER BY
+         CASE m.role WHEN 'ADMIN' THEN 1 WHEN 'MODERATOR' THEN 2 ELSE 3 END,
+         m.created_at`,
+      [circleId]
+    );
+    const members = membersResult.rows;
+
+    // 5. Calculate circle-level statistics
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
+    const inProgressTasks = tasks.filter(t => t.status === 'IN_PROGRESS').length;
+    const todoTasks = tasks.filter(t => t.status === 'TODO').length;
+    const completionPct = totalTasks > 0
+      ? Math.round((completedTasks / totalTasks) * 100)
+      : 0;
+
+    // 6. Calculate per-member statistics from actual task assignment records
+    //    Each task row is already one assignment (one assigned_to), so we count directly.
+    const memberStats = members.map(member => {
+      const assigned = tasks.filter(t => t.assignee_id === member.id);
+      return {
+        id: member.id,
+        name: member.name,
+        role: member.role,
+        total: assigned.length,
+        completed: assigned.filter(t => t.status === 'COMPLETED').length,
+        inProgress: assigned.filter(t => t.status === 'IN_PROGRESS').length,
+        todo: assigned.filter(t => t.status === 'TODO').length,
+      };
+    });
+
+    // 7. Build CSV lines
+    const lines = [];
+
+    // ── Circle Summary ───────────────────────────────────────────────────────
+    lines.push(csvRow(['CIRCLE SUMMARY']));
+    lines.push(csvRow(['Circle Name', circle.name]));
+    lines.push(csvRow(['Circle Code', circle.code]));
+    lines.push(csvRow(['Privacy', circle.privacy]));
+    lines.push(csvRow(['Total Tasks', totalTasks]));
+    lines.push(csvRow(['Completed', completedTasks]));
+    lines.push(csvRow(['In Progress', inProgressTasks]));
+    lines.push(csvRow(['To Do', todoTasks]));
+    lines.push(csvRow(['Completion %', `${completionPct}%`]));
+    lines.push(''); // blank separator
+
+    // ── Task Details ─────────────────────────────────────────────────────────
+    lines.push(csvRow(['TASK DETAILS']));
+    lines.push(csvRow([
+      'Circle Name',
+      'Task Title',
+      'Description',
+      'Created By',
+      'Assigned To',
+      'Created Date',
+      'Due Date',
+      'Priority',
+      'Status',
+      'Group Assignment ID',
+    ]));
+
+    if (tasks.length === 0) {
+      lines.push(csvRow(['(No tasks in this circle)', '', '', '', '', '', '', '', '', '']));
+    } else {
+      for (const t of tasks) {
+        lines.push(csvRow([
+          circle.name,
+          t.title,
+          t.description || '',
+          t.creator_name || '',
+          t.assignee_name || '(Unassigned)',
+          formatDate(t.created_at),
+          formatDate(t.due_date),
+          t.priority,
+          t.status,
+          t.assignment_group_id || '',
+        ]));
+      }
+    }
+
+    lines.push(''); // blank separator
+
+    // ── Member Statistics ─────────────────────────────────────────────────────
+    lines.push(csvRow(['MEMBER STATISTICS']));
+    lines.push(csvRow([
+      'Member Name',
+      'Role',
+      'Total Assigned',
+      'Completed Tasks',
+      'In Progress Tasks',
+      'To Do Tasks',
+    ]));
+
+    if (memberStats.length === 0) {
+      lines.push(csvRow(['(No active members)', '', '', '', '', '']));
+    } else {
+      for (const ms of memberStats) {
+        lines.push(csvRow([
+          ms.name,
+          ms.role,
+          ms.total,
+          ms.completed,
+          ms.inProgress,
+          ms.todo,
+        ]));
+      }
+    }
+
+    // 8. Stream the CSV response
+    const csvContent = lines.join('\n');
+    const safeName = circle.name.replace(/[^a-z0-9_\-]/gi, '_').slice(0, 50);
+    const filename = `circle_${safeName}_data.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Cache-Control', 'no-store');
+    // BOM for Excel UTF-8 compatibility
+    res.send('\uFEFF' + csvContent);
+  })
+);
+
 export default router;

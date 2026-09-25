@@ -1,56 +1,742 @@
-=========================================
-TASKCIRCLE: PROJECT EXPLANATION
-=========================================
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                        TASKCIRCLE — COMPLETE PROJECT DOCUMENTATION               ║
+║                        Written: September 2026                                   ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
 
-1. WHAT IS THIS PROJECT?
------------------------------------------
-TaskCircle is a collaborative, full-stack task management web application designed to help teams organize, track, and accomplish their work efficiently. Unlike simple to-do lists, it allows users to group their work into dedicated, isolated workspaces called "Circles". Each Circle has its own privacy settings and role-based access controls (Admin, Moderator, Member). 
 
-To boost productivity, the project features an integrated AI assistant to help teams break down complex objectives, as well as an automated notification engine to remind users of impending or missed task deadlines.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. WHAT IS TASKCIRCLE?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-2. HOW THIS PROJECT WORKS
------------------------------------------
-* Authentication: Users sign in securely without passwords using their Google accounts (via Google OAuth 2.0).
-* Workspaces (Circles): Once logged in, users can create new Circles or join existing ones using a unique 8-character invite code. They can also request to join private Circles.
-* Task Management: Inside a Circle, authorized members can create tasks, assign them to specific team members, set priorities (Low/Medium/High), define due dates, and update statuses (Todo, In Progress, Completed). Users can also see a global "My Tasks" view to track everything assigned to them across all their Circles.
-* AI Assistant: Users can chat with a built-in AI assistant powered by Groq (using the Llama 3.1 model). The AI can help brainstorm ideas and break down large project goals into smaller, actionable tasks.
-* Automated Reminders: The system runs automated background jobs every day to check for tasks that are due today, due tomorrow, or overdue. It then generates in-app notifications based on each user's personal alert preferences.
+TaskCircle is a full-stack, real-time collaborative task management web application
+designed to help teams organize, assign, track, and complete their work inside
+isolated group workspaces called "Circles".
 
-3. WHAT IS THE FLOW (DATA & ARCHITECTURE FLOW)
------------------------------------------
-The application follows a modern Client-Server REST API architecture:
+Unlike a basic to-do list, TaskCircle provides:
+  - Role-based access control inside every workspace (Admin, Moderator, Member)
+  - Bulk task assignment ("Assign to All" members at once)
+  - Real-time group chat per Circle using WebSockets
+  - An AI-powered assistant (powered by Groq / LLaMA) that understands your tasks
+  - Automated deadline reminders (cron jobs run twice daily at 9 AM and 5 PM IST)
+  - Secure passwordless authentication via Google OAuth 2.0
+  - Fully responsive design for desktop, tablet, and mobile
 
-* User Interaction: The user clicks a button or submits a form on the React frontend (Single Page Application).
-* Request Routing: The React app sends an HTTP request (REST API call) to the Node.js/Express backend.
-* Security & Middleware: The backend receives the request. Middleware checks for a valid session cookie. Sessions are managed by Passport.js and securely stored in Redis memory for high performance.
-* Business Logic: The request reaches the respective route (e.g., circleRoutes, taskRoutes, chatRoutes). The service logic determines what needs to be done.
-* Data Layer: The backend executes SQL queries against the PostgreSQL database using a connection pool to fetch, insert, or update data.
-* Response: The backend returns a JSON response to the frontend. React then updates the UI state so the user sees the changes instantly.
-* Background Flow: Completely separate from user interactions, a `node-cron` scheduler runs daily on the backend server. It scans the PostgreSQL database for deadlines, calculates who needs to be reminded, and inserts alerts into the `notifications` table. When the user logs in or refreshes, the frontend fetches these unread notifications.
+The application is deployed as a single Docker container on Render.com, where the
+Node.js/Express backend serves the pre-built React frontend as static files,
+removing the need for a separate frontend server in production.
 
-4. WHAT TECHNOLOGIES ARE USED FOR THIS PROJECT?
------------------------------------------
-Frontend (Client-Side):
-* React 19: UI component library.
-* Vite: Fast build tool and development server.
-* React Router DOM: For handling client-side page navigation.
-* Vanilla CSS: For clean, custom styling without heavy frameworks.
 
-Backend (Server-Side):
-* Node.js & Express.js: The core server and REST API framework.
-* Passport.js: Handles the complex Google OAuth 2.0 authentication flow.
-* node-cron: Runs scheduled background tasks for notifications.
-* multer: For handling any file/multipart form data uploads if present.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. TECHNOLOGY STACK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Databases:
-* PostgreSQL: The primary relational database storing users, circles, tasks, memberships, and notifications.
-* Redis: An in-memory data store used specifically to handle and cache user login sessions securely and rapidly.
+FRONTEND
+────────
+  • React 19          — UI component library (SPA)
+  • Vite              — Build tool and dev server
+  • React Router DOM  — Client-side page routing (/app, /app/circles/:id, etc.)
+  • Vanilla CSS       — Custom design system (dark mode, glassmorphism, animations)
+  • WebSocket API     — Browser native WS for real-time group chat
+  • Google Fonts      — Inter + Space Grotesk typography
 
-External APIs:
-* Google OAuth 2.0 API: For secure, passwordless authentication.
-* Groq AI API (Llama 3.1): For powering the integrated AI chat assistant.
+BACKEND
+────────
+  • Node.js (ES Modules)  — Runtime
+  • Express.js v5         — HTTP server and REST API framework
+  • ws                    — WebSocket server (attached to same HTTP server, no extra port)
+  • Passport.js           — Google OAuth 2.0 authentication strategy
+  • express-session       — Session management
+  • connect-redis         — Stores sessions in Redis (fast lookup, auto-expiry)
+  • helmet                — HTTP security headers (custom CSP for Google avatars + WS)
+  • express-rate-limit    — API abuse prevention (global 500/15min, chat 20/15min)
+  • express-validator     — Input validation and sanitization
+  • node-cron             — Scheduled background jobs for notifications
+  • multer                — Multipart form data handling
 
-DevOps & Deployment:
-* Docker & Docker Compose: Containerizes both the frontend and backend so they can be easily run in any environment.
-* Nginx: Used as a reverse proxy web server to serve the built React frontend in production.
-* Render.com Configuration: Includes a `render.yaml` file indicating the project is configured for cloud deployment on the Render platform.
+DATABASES
+──────────
+  • PostgreSQL    — Primary relational database (all persistent data)
+  • Redis         — In-memory session store (fast auth on every request)
+
+EXTERNAL SERVICES
+──────────────────
+  • Google OAuth 2.0 API  — Passwordless authentication
+  • Groq API (LLaMA)      — AI chat assistant (model: llama / openai-compatible)
+
+DEVOPS & DEPLOYMENT
+────────────────────
+  • Docker (multi-stage Dockerfile)  — Builds frontend, packages with backend
+  • Docker Compose                   — Local dev orchestration (app + postgres + redis)
+  • Render.com (render.yaml)         — Cloud deployment (web service + postgres + redis)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. FEATURES — DETAILED BREAKDOWN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3.1 AUTHENTICATION
+───────────────────
+  • Users log in using their Google account — no passwords stored anywhere.
+  • Google redirects back to /api/auth/google/callback after approval.
+  • Passport.js verifies the Google profile, upserts the user in PostgreSQL
+    (creates a new row if first login, updates avatar/name if changed).
+  • A session cookie (taskcircle.sid) is issued and stored in Redis with a
+    7-day TTL. Every subsequent API request reads this session from Redis
+    to identify the logged-in user.
+  • On logout, the session is destroyed from Redis and the cookie is cleared.
+  • CSRF protection: A unique token is generated per session and sent on every
+    state-changing request (POST/PATCH/DELETE) via the x-csrf-token header.
+
+3.2 CIRCLES (WORKSPACES)
+─────────────────────────
+  • A Circle is a named, isolated workspace. Each has:
+      - A unique 8-character alphanumeric invite code (e.g., "AB3KZ9PQ")
+      - A privacy setting: PUBLIC or PRIVATE
+      - A creator who becomes the initial ADMIN
+  • PUBLIC circles: Anyone with the code can join instantly.
+  • PRIVATE circles: Joining sends a "pending" join request. An Admin or
+    Moderator must approve or reject it.
+  • Members have one of three roles inside a Circle:
+      ┌────────────┬───────────────────────────────────────────────────────┐
+      │ ADMIN      │ Full control: create/delete tasks, manage members,    │
+      │            │ approve join requests, change roles, leave (if not    │
+      │            │ the last admin).                                      │
+      ├────────────┼───────────────────────────────────────────────────────┤
+      │ MODERATOR  │ Can create/delete tasks, approve join requests,       │
+      │            │ manage member roles below their own.                  │
+      ├────────────┼───────────────────────────────────────────────────────┤
+      │ MEMBER     │ Can view tasks and circles, update status of tasks    │
+      │            │ assigned to them only. Cannot create/delete tasks.    │
+      └────────────┴───────────────────────────────────────────────────────┘
+  • A member can leave a Circle (unless they are the last ADMIN).
+  • An Admin/Mod can remove any member or change their role.
+
+3.3 TASK MANAGEMENT
+────────────────────
+  • Tasks live inside a Circle and can be:
+      - Assigned to a specific member
+      - Assigned to ALL members simultaneously (via "Assign to All" button)
+
+  • Each task has:
+      - Title (required, 2–200 chars)
+      - Description (optional)
+      - Priority: LOW | MEDIUM | HIGH
+      - Status: TODO | IN_PROGRESS | COMPLETED
+      - Due Date (optional, ISO 8601 datetime)
+      - Assigned To (single user ID, nullable)
+      - Assignment Group ID (UUID, shared by sibling tasks from "Assign to All")
+
+  • "Assign to All" creates one task per active member, all sharing the same
+    assignment_group_id UUID. The Circle detail page groups these siblings and
+    shows a combined progress count (e.g., "3/7 done"). Clicking "View Progress"
+    shows every member's individual status.
+
+  • Permission matrix for task updates:
+      - ADMIN / MODERATOR: can update any field (title, description, priority,
+        assignee, due date, status).
+      - MEMBER: can only update the "status" field of tasks assigned to them.
+        Attempting to change other fields returns HTTP 403.
+
+  • Tasks are deleted by ADMIN or MODERATOR only.
+
+  • A notification is automatically created for the assignee when a new task
+    is assigned to them (type: NEW_TASK).
+
+3.4 MY TASKS VIEW
+──────────────────
+  • A dedicated "My Tasks" page shows all tasks assigned to the logged-in user
+    across ALL their Circles in one unified view.
+  • Grouped and filterable by status.
+
+3.5 REAL-TIME GROUP CHAT
+─────────────────────────
+  • Each Circle has a dedicated group chat, accessible via the "💬 Group Chat"
+    floating button on the Circle detail page.
+  • Built on native WebSockets (ws library on the server, browser WebSocket API
+    on the client). The WebSocket server shares the same HTTP port — no extra
+    port or service needed.
+
+  • Connection flow:
+      1. Browser connects to wss://host/ws/circles/:circleId
+      2. Server runs the session parser on the upgrade request to identify the user.
+      3. Server checks the database: user must be an ACTIVE member of the Circle.
+      4. If valid, the WebSocket connection is accepted. Otherwise 401/403.
+
+  • Features:
+      - Chat history: Last 50 messages loaded from PostgreSQL on connect.
+      - Live messages: Broadcast instantly to all connected members of the Circle.
+      - Typing indicators: "Alice is typing…" shown to others (auto-clears after
+        1.5 seconds of inactivity, cleared immediately on send).
+      - Presence events: "joined"/"left" events broadcast to the room.
+      - Persistence: Every message is saved to the circle_messages table in PostgreSQL.
+      - Security: Only ACTIVE circle members can connect. Unauthenticated users
+        are rejected at the WebSocket upgrade stage.
+
+3.6 AI ASSISTANT (CHATBOT)
+───────────────────────────
+  • A floating AI chat panel (🤖 icon) accessible from the sidebar on any page.
+  • Powered by the Groq API with the configured LLaMA model.
+  • Before sending a message to Groq, the backend builds a context string
+    containing the user's real data:
+      - All circles they belong to (name, privacy, role)
+      - All tasks assigned to them (title, status, priority, circle, due date)
+      - Summary counts: overdue, due today, due tomorrow, completed, in progress, todo
+  • This context is injected as a system prompt so the AI answers questions
+    specifically about the user's TaskCircle data.
+  • Rate limited to 20 requests per 15 minutes per user.
+
+3.7 NOTIFICATIONS
+──────────────────
+  • Two sources of notifications:
+      a) Task Assignment: Immediate — created when a task is assigned.
+      b) Deadline Reminders: Automatic — created by the cron scheduler.
+
+  • The cron scheduler runs at 9:00 AM and 5:00 PM IST every day.
+    It runs a single efficient SQL INSERT that:
+      - Finds all incomplete tasks with due dates
+      - Categorises them as DUE_TODAY, DUE_TOMORROW, or OVERDUE
+      - Checks each assignee's notification preferences
+      - Inserts notifications only for enabled types
+      - Uses ON CONFLICT DO NOTHING with a unique index on
+        (user_id, task_id, type, reminder_date) to prevent duplicates
+
+  • Users can control which types of reminders they receive:
+      - Due Today alerts: ON/OFF
+      - Due Tomorrow alerts: ON/OFF
+      - Overdue alerts: ON/OFF
+    (Preferences stored in notification_preferences table)
+
+  • Notifications page: Shows all notifications, unread ones highlighted.
+    Users can mark individual or all notifications as read.
+
+  • Unread count badge on the sidebar bell icon, polled on page load and
+    refreshable via the topbar refresh button.
+
+3.8 PROFILE
+────────────
+  • Users can update their display name (Google avatar is synced from OAuth).
+  • Profile page shows account info and notification preferences toggle switches.
+
+3.9 SECURITY
+─────────────
+  • Helmet.js enforces strict HTTP security headers including a custom
+    Content Security Policy:
+      - img-src: self, data:, lh3–6.googleusercontent.com (Google avatars)
+      - connect-src: self, wss:, ws:, Groq API
+      - script-src: self, unsafe-inline (for Vite bootstrap chunk)
+  • Sessions stored in Redis, never in the database.
+  • CSRF tokens required on all mutating requests.
+  • Input validation on all API endpoints (express-validator).
+  • Rate limiting: 500 requests/15min globally, 20/15min for AI chat.
+  • SQL injection impossible — all queries use parameterised placeholders ($1, $2…).
+  • Trust proxy enabled (Render sits behind a load balancer).
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. DATA FLOW — HOW IT ALL WORKS TOGETHER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+4.1 STANDARD HTTP REQUEST FLOW
+────────────────────────────────
+
+  [Browser]
+      │
+      │  1. User interacts (click button, submit form)
+      ▼
+  [React SPA]
+      │
+      │  2. apiRequest() sends fetch() to /api/... with credentials + CSRF token
+      ▼
+  [Express.js — app.js]
+      │
+      │  3. Middleware pipeline:
+      │     a) helmet()           — sets security headers
+      │     b) cors()             — validates Origin header
+      │     c) express.static()   — serves CSS/JS/images (skips auth)
+      │     d) rateLimit()        — checks request rate per IP
+      │     e) sessionMiddleware() — reads taskcircle.sid cookie → Redis → req.session
+      │     f) passport.session() — deserialises user from session → req.user
+      │     g) csrfMiddleware()   — validates x-csrf-token on mutations
+      ▼
+  [Route Handler — e.g., circleRoutes.js]
+      │
+      │  4. requireAuth() checks req.user exists (401 if not)
+      │  5. requireCircleRole() queries memberships table (403 if not member)
+      │  6. express-validator validates input fields (400 if invalid)
+      ▼
+  [Business Logic]
+      │
+      │  7. pool.query() executes parameterised SQL against PostgreSQL
+      │  8. Results processed, formatted
+      ▼
+  [Response]
+      │
+      │  9. sendSuccess(res, data) sends { success: true, data: ... }
+      ▼
+  [React SPA]
+      │
+      │  10. State updated, UI re-renders
+
+
+4.2 GOOGLE OAUTH LOGIN FLOW
+────────────────────────────
+
+  Browser → GET /api/auth/google
+      │
+      │  Passport redirects to Google's OAuth consent screen
+      ▼
+  Google → user grants permission
+      │
+      │  Google redirects to /api/auth/google/callback?code=...
+      ▼
+  Passport verifies token, receives profile (id, name, email, avatar)
+      │
+      │  Backend: INSERT INTO users ... ON CONFLICT DO UPDATE (upsert)
+      │           Creates session in Redis
+      │           Sets taskcircle.sid cookie
+      ▼
+  Browser → redirected to /app (dashboard)
+
+
+4.3 WEBSOCKET (GROUP CHAT) FLOW
+────────────────────────────────
+
+  Browser → WebSocket upgrade request to wss://host/ws/circles/42
+      │
+      │  HTTP Upgrade event intercepted in server.js (before Express)
+      ▼
+  wsSessionParser runs session + passport middleware on the upgrade req
+      │
+      │  Extracts req.user from session cookie
+      ▼
+  DB query: SELECT 1 FROM memberships WHERE circle_id=42 AND user_id=? AND status='ACTIVE'
+      │
+      │  If not found → 403 Forbidden, socket destroyed
+      │  If found     → WebSocket connection accepted
+      ▼
+  WS Connected:
+      │  → Server sends { type: 'history', messages: [...last 50...] }
+      │  → Server broadcasts { type: 'presence', event: 'joined' } to others
+      ▼
+  User sends message → { type: 'message', content: 'Hello!' }
+      │
+      │  Server saves to circle_messages table in PostgreSQL
+      │  Server broadcasts { type: 'message', ...saved data } to ALL in room
+      ▼
+  User starts typing → { type: 'typing', isTyping: true }
+      │
+      │  Server broadcasts { type: 'typing', isTyping: true } to OTHERS only
+      ▼
+  User disconnects:
+      │  → Client removed from in-memory room map
+      │  → { type: 'presence', event: 'left' } broadcast to remaining members
+      │  → Room deleted from map if it becomes empty
+
+
+4.4 NOTIFICATION SCHEDULER FLOW (Background)
+─────────────────────────────────────────────
+
+  node-cron triggers at 9:00 AM and 5:00 PM IST every day
+      │
+      ▼
+  Single SQL query executed:
+      │
+      │  WITH task_data AS (
+      │    SELECT task_id, assigned_to,
+      │           CASE
+      │             WHEN due_date = TODAY       → 'DUE_TODAY'
+      │             WHEN due_date = TOMORROW    → 'DUE_TOMORROW'
+      │             WHEN due_date < TODAY AND
+      │                  status != 'COMPLETED'  → 'OVERDUE'
+      │           END AS notification_type
+      │    FROM tasks
+      │    WHERE assigned_to IS NOT NULL
+      │      AND due_date IS NOT NULL
+      │      AND status != 'COMPLETED'
+      │  )
+      │  INSERT INTO notifications (user_id, task_id, type, message, reminder_date)
+      │  SELECT ... FROM task_data
+      │  JOIN notification_preferences ON user_id = assigned_to
+      │  WHERE type enabled in prefs
+      │  ON CONFLICT DO NOTHING;   ← prevents duplicates via unique index
+      │
+      ▼
+  Rows inserted into notifications table
+      │
+      ▼
+  Next time user visits the app → unread badge shows count
+  User visits Notifications page → reads and clears alerts
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. DATABASE TABLES — COMPLETE SCHEMA
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Total tables: 9
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  TABLE 1: users                                                              │
+│  Purpose: Stores every person who has ever logged in via Google OAuth        │
+├─────────────────────┬─────────────────┬──────────────────────────────────────┤
+│ Column              │ Type            │ Notes                                │
+├─────────────────────┼─────────────────┼──────────────────────────────────────┤
+│ id                  │ BIGSERIAL PK    │ Auto-incrementing primary key        │
+│ google_id           │ VARCHAR(128)    │ Unique Google account ID             │
+│ email               │ VARCHAR(255)    │ Unique email from Google             │
+│ name                │ VARCHAR(120)    │ Display name (editable by user)      │
+│ avatar_url          │ TEXT            │ Google profile picture URL           │
+│ created_at          │ TIMESTAMP       │ First login time                     │
+│ updated_at          │ TIMESTAMP       │ Last profile update                  │
+└─────────────────────┴─────────────────┴──────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  TABLE 2: circles                                                            │
+│  Purpose: The main workspace containers                                      │
+├─────────────────────┬─────────────────┬──────────────────────────────────────┤
+│ Column              │ Type            │ Notes                                │
+├─────────────────────┼─────────────────┼──────────────────────────────────────┤
+│ id                  │ BIGSERIAL PK    │ Auto-incrementing primary key        │
+│ name                │ VARCHAR(120)    │ Circle display name                  │
+│ description         │ TEXT            │ Optional description                 │
+│ code                │ CHAR(8)         │ Unique 8-char uppercase invite code  │
+│ privacy             │ VARCHAR(10)     │ 'PUBLIC' or 'PRIVATE'                │
+│ created_by          │ BIGINT FK       │ References users.id (RESTRICT)       │
+│ created_at          │ TIMESTAMP       │ Creation time                        │
+│ updated_at          │ TIMESTAMP       │ Last update time                     │
+└─────────────────────┴─────────────────┴──────────────────────────────────────┘
+  Indexes: idx_circles_created_by
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  TABLE 3: memberships                                                        │
+│  Purpose: Links users to circles with a role and status                      │
+├─────────────────────┬─────────────────┬──────────────────────────────────────┤
+│ Column              │ Type            │ Notes                                │
+├─────────────────────┼─────────────────┼──────────────────────────────────────┤
+│ id                  │ BIGSERIAL PK    │ Auto-incrementing primary key        │
+│ circle_id           │ BIGINT FK       │ References circles.id (CASCADE)      │
+│ user_id             │ BIGINT FK       │ References users.id (CASCADE)        │
+│ role                │ VARCHAR(16)     │ 'ADMIN' | 'MODERATOR' | 'MEMBER'     │
+│ status              │ VARCHAR(16)     │ 'ACTIVE' | 'REMOVED'                 │
+│ created_at          │ TIMESTAMP       │ When they joined                     │
+│ updated_at          │ TIMESTAMP       │ Last role/status change              │
+└─────────────────────┴─────────────────┴──────────────────────────────────────┘
+  Unique: (circle_id, user_id) — one record per user per circle
+  Indexes: idx_memberships_user_circle
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  TABLE 4: join_requests                                                      │
+│  Purpose: Pending requests to join private circles                           │
+├─────────────────────┬─────────────────┬──────────────────────────────────────┤
+│ Column              │ Type            │ Notes                                │
+├─────────────────────┼─────────────────┼──────────────────────────────────────┤
+│ id                  │ BIGSERIAL PK    │ Auto-incrementing primary key        │
+│ circle_id           │ BIGINT FK       │ References circles.id (CASCADE)      │
+│ user_id             │ BIGINT FK       │ References users.id (CASCADE)        │
+│ status              │ VARCHAR(16)     │ 'PENDING' | 'APPROVED' | 'REJECTED'  │
+│ created_at          │ TIMESTAMP       │ When request was submitted           │
+│ updated_at          │ TIMESTAMP       │ When admin acted on it               │
+└─────────────────────┴─────────────────┴──────────────────────────────────────┘
+  Unique: (circle_id, user_id) — one active request per user per circle
+  Indexes: idx_join_requests_circle_status
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  TABLE 5: tasks                                                              │
+│  Purpose: The core tasks created inside circles                              │
+├─────────────────────┬─────────────────┬──────────────────────────────────────┤
+│ Column              │ Type            │ Notes                                │
+├─────────────────────┼─────────────────┼──────────────────────────────────────┤
+│ id                  │ BIGSERIAL PK    │ Auto-incrementing primary key        │
+│ circle_id           │ BIGINT FK       │ References circles.id (CASCADE)      │
+│ title               │ VARCHAR(200)    │ Task title, required                 │
+│ description         │ TEXT            │ Optional detailed description        │
+│ priority            │ VARCHAR(16)     │ 'LOW' | 'MEDIUM' | 'HIGH'            │
+│ status              │ VARCHAR(16)     │ 'TODO' | 'IN_PROGRESS' | 'COMPLETED' │
+│ assigned_to         │ BIGINT FK       │ References users.id (SET NULL)       │
+│ created_by          │ BIGINT FK       │ References users.id (RESTRICT)       │
+│ due_date            │ TIMESTAMP       │ Optional deadline                    │
+│ assignment_group_id │ UUID            │ Groups sibling "Assign to All" tasks │
+│ created_at          │ TIMESTAMP       │ Task creation time                   │
+│ updated_at          │ TIMESTAMP       │ Last edit time                       │
+└─────────────────────┴─────────────────┴──────────────────────────────────────┘
+  Indexes: idx_tasks_circle_id, idx_tasks_assigned_to, idx_tasks_due_date,
+           idx_tasks_assignment_group_id (partial, WHERE NOT NULL),
+           idx_tasks_status, idx_tasks_circle_created
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  TABLE 6: notifications                                                      │
+│  Purpose: In-app alerts for task assignments and deadline reminders          │
+├─────────────────────┬─────────────────┬──────────────────────────────────────┤
+│ Column              │ Type            │ Notes                                │
+├─────────────────────┼─────────────────┼──────────────────────────────────────┤
+│ id                  │ BIGSERIAL PK    │ Auto-incrementing primary key        │
+│ user_id             │ BIGINT FK       │ References users.id (CASCADE)        │
+│ circle_id           │ BIGINT FK       │ References circles.id (CASCADE), opt │
+│ task_id             │ BIGINT FK       │ References tasks.id (CASCADE), opt   │
+│ type                │ VARCHAR(24)     │ 'NEW_TASK' | 'DUE_TODAY' |           │
+│                     │                 │ 'DUE_TOMORROW' | 'OVERDUE'           │
+│ message             │ TEXT            │ Human-readable notification text     │
+│ reminder_date       │ DATE            │ The date the reminder was triggered  │
+│ is_read             │ BOOLEAN         │ Default FALSE; TRUE when user reads  │
+│ created_at          │ TIMESTAMP       │ When notification was created        │
+│ updated_at          │ TIMESTAMP       │ When marked as read                  │
+└─────────────────────┴─────────────────┴──────────────────────────────────────┘
+  Indexes: idx_notifications_user_read, idx_notifications_user_unread (partial)
+  Unique:  uniq_task_reminders ON (user_id, task_id, type, reminder_date)
+           WHERE type IN ('DUE_TODAY','DUE_TOMORROW','OVERDUE')
+           → prevents the cron from inserting duplicate daily reminders
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  TABLE 7: notification_preferences                                           │
+│  Purpose: Per-user toggle settings for which reminder types to receive       │
+├─────────────────────┬─────────────────┬──────────────────────────────────────┤
+│ Column              │ Type            │ Notes                                │
+├─────────────────────┼─────────────────┼──────────────────────────────────────┤
+│ user_id             │ BIGINT PK FK    │ References users.id (CASCADE)        │
+│ due_today_enabled   │ BOOLEAN         │ Default TRUE                         │
+│ due_tomorrow_enabled│ BOOLEAN         │ Default TRUE                         │
+│ overdue_enabled     │ BOOLEAN         │ Default TRUE                         │
+│ created_at          │ TIMESTAMP       │ First preference save                │
+│ updated_at          │ TIMESTAMP       │ Last preference change               │
+└─────────────────────┴─────────────────┴──────────────────────────────────────┘
+  One row per user (PK = user_id). Upserted via ON CONFLICT DO UPDATE.
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  TABLE 8: circle_messages                                                    │
+│  Purpose: Persists group chat messages for each Circle                       │
+├─────────────────────┬─────────────────┬──────────────────────────────────────┤
+│ Column              │ Type            │ Notes                                │
+├─────────────────────┼─────────────────┼──────────────────────────────────────┤
+│ id                  │ BIGSERIAL PK    │ Auto-incrementing primary key        │
+│ circle_id           │ BIGINT FK       │ References circles.id (CASCADE)      │
+│ user_id             │ BIGINT FK       │ References users.id (CASCADE)        │
+│ content             │ TEXT            │ Message text (1–2000 chars)          │
+│ created_at          │ TIMESTAMP       │ Message send time                    │
+└─────────────────────┴─────────────────┴──────────────────────────────────────┘
+  Indexes: idx_circle_messages_circle_created (circle_id, created_at DESC)
+  Note: No updated_at — messages are immutable once sent.
+        Last 50 messages per circle sent as history when WS connects.
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  TABLE 9: schema_migrations                                                  │
+│  Purpose: Tracks which SQL migration files have been applied                 │
+├─────────────────────┬─────────────────┬──────────────────────────────────────┤
+│ Column              │ Type            │ Notes                                │
+├─────────────────────┼─────────────────┼──────────────────────────────────────┤
+│ id                  │ SERIAL PK       │ Auto-incrementing primary key        │
+│ filename            │ TEXT            │ Unique migration filename            │
+│ executed_at         │ TIMESTAMP       │ When migration was applied           │
+└─────────────────────┴─────────────────┴──────────────────────────────────────┘
+  Managed automatically by runMigrations() on every server startup.
+  Files in /migrations/ are applied in alphabetical order, once only.
+  Current files: 001_init.sql, 002_improvements.sql, 003_circle_messages.sql
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. DATABASE RELATIONSHIPS (Entity Relationship Summary)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  users ────────────────────┬──── memberships ────── circles
+    │                        │         │
+    │                        │         └──── join_requests
+    │                        │
+    ├──── tasks (assigned)   │
+    │       │                │
+    │       └── notifications│
+    │                        │
+    ├──── notifications ─────┘
+    │
+    ├──── notification_preferences (1:1)
+    │
+    └──── circle_messages ───── circles
+
+
+  • users → circles: MANY-TO-MANY through memberships
+  • circles → tasks: ONE-TO-MANY (each task belongs to one circle)
+  • users → tasks (assigned_to): MANY-TO-ONE (each task has one optional assignee)
+  • tasks → notifications: ONE-TO-MANY (a task can have multiple reminders)
+  • circles → circle_messages: ONE-TO-MANY (each message belongs to one circle)
+  • users → notification_preferences: ONE-TO-ONE
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. API ENDPOINTS — COMPLETE LIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+AUTH (/api/auth)
+  GET  /google                        → Redirect to Google login
+  GET  /google/callback               → OAuth callback, creates session
+  GET  /failed                        → Auth failure response
+  GET  /me                            → Returns current user + CSRF token
+  GET  /csrf                          → Returns fresh CSRF token
+  POST /logout                        → Destroys session, clears cookie
+
+PROFILE (/api/profile)
+  GET   /                             → Get current user's profile
+  PATCH /                             → Update display name
+  GET   /notification-preferences     → Get notification toggle settings
+  PATCH /notification-preferences     → Update notification toggle settings
+
+CIRCLES (/api/circles)
+  GET   /                             → List all circles the user belongs to
+  POST  /                             → Create a new circle (user becomes ADMIN)
+  GET   /:circleId                    → Get single circle (members only)
+  POST  /join                         → Join via invite code (or request to join)
+  GET   /:circleId/members            → List active members
+  POST  /:circleId/members/leave      → Leave a circle
+  PATCH /:circleId/members/:membershipId → Change a member's role (Admin/Mod)
+  DELETE/:circleId/members/:membershipId → Remove a member (Admin/Mod)
+  GET   /:circleId/join-requests      → List pending join requests (Admin/Mod)
+  PATCH /:circleId/join-requests/:requestId → Approve or reject a request
+  GET   /:circleId/tasks              → List all tasks in the circle
+  POST  /:circleId/tasks              → Create a task (Admin/Mod)
+  POST  /:circleId/tasks/assign-all   → Assign task to all active members
+
+TASKS (/api/tasks)
+  GET   /:taskId                      → Get task + group progress (members only)
+  PATCH /:taskId                      → Update task (Admin/Mod: all fields; Member: status only)
+  DELETE/:taskId                      → Delete task (Admin/Mod only)
+
+MY TASKS (/api/my-tasks)
+  GET   /                             → All tasks assigned to current user (all circles)
+
+NOTIFICATIONS (/api/notifications)
+  GET   /                             → Get all notifications (last 100)
+  GET   /unread-count                 → Get count of unread notifications
+  PATCH /read-all                     → Mark all as read
+  PATCH /:notificationId/read         → Mark one notification as read
+
+AI CHAT (/api/chat)
+  POST  /                             → Send message to AI (rate limited: 20/15min)
+
+GROUP CHAT (WebSocket)
+  WS    /ws/circles/:circleId         → Real-time group chat per circle
+
+HEALTH CHECK
+  GET   /health                       → Returns { status: 'ok', timestamp }
+                                        (used by Render to verify service is up)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. PROJECT FILE STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Task-Circle/
+├── Dockerfile                  ← Multi-stage: build React → package with backend
+├── docker-compose.yml          ← Local dev: app + postgres + redis
+├── render.yaml                 ← Render.com deployment config
+├── package.json                ← Root workspace scripts
+│
+├── backend/
+│   ├── package.json            ← Backend dependencies (express, ws, pg, redis…)
+│   ├── migrations/
+│   │   ├── 001_init.sql        ← Creates all core tables
+│   │   ├── 002_improvements.sql← Adds assignment_group_id + indexes
+│   │   └── 003_circle_messages.sql ← Adds group chat table
+│   └── src/
+│       ├── server.js           ← HTTP server + WebSocket init
+│       ├── app.js              ← Express app (middleware, routes, CSP)
+│       ├── config/
+│       │   ├── env.js          ← Reads all environment variables
+│       │   └── passport.js     ← Google OAuth strategy
+│       ├── db/
+│       │   ├── pool.js         ← PostgreSQL connection pool
+│       │   ├── redis.js        ← Redis client
+│       │   └── migrate.js      ← Auto-runs SQL migrations on startup
+│       ├── middleware/
+│       │   ├── auth.js         ← requireAuth, requireCircleRole
+│       │   ├── csrf.js         ← CSRF token generation + validation
+│       │   └── errorHandler.js ← Global error handler + validation helper
+│       ├── routes/
+│       │   ├── authRoutes.js
+│       │   ├── circleRoutes.js
+│       │   ├── taskRoutes.js
+│       │   ├── myTaskRoutes.js
+│       │   ├── notificationRoutes.js
+│       │   ├── profileRoutes.js
+│       │   └── chatRoutes.js   ← AI chatbot (Groq)
+│       ├── services/
+│       │   ├── groupChat.js    ← WebSocket server for real-time group chat
+│       │   ├── groupCode.js    ← Generates unique 8-char circle invite codes
+│       │   └── notificationsScheduler.js ← Cron job for deadline reminders
+│       └── utils/
+│           ├── errors.js       ← AppError class + asyncHandler wrapper
+│           └── response.js     ← Standardised sendSuccess() helper
+│
+└── frontend/
+    ├── package.json            ← Frontend dependencies (react, vite, react-router)
+    ├── index.html              ← SPA entry point (viewport meta, root div)
+    ├── vite.config.js          ← Vite configuration
+    └── src/
+        ├── main.jsx            ← React entry point
+        ├── App.jsx             ← Root component: auth check, routing
+        ├── api/
+        │   └── client.js       ← apiRequest() fetch wrapper with CSRF + credentials
+        ├── components/
+        │   ├── AppLayout.jsx   ← Shell: desktop sidebar + mobile drawer + topbar
+        │   ├── Chatbot.jsx     ← AI assistant floating panel
+        │   ├── GroupChat.jsx   ← Real-time group chat WebSocket panel
+        │   └── StatusBlock.jsx ← Loading / error / empty state wrapper
+        ├── pages/
+        │   ├── LoginPage.jsx
+        │   ├── DashboardPage.jsx
+        │   ├── CircleDetailPage.jsx
+        │   ├── TaskDetailPage.jsx
+        │   ├── MyTasksPage.jsx
+        │   ├── NotificationsPage.jsx
+        │   └── ProfilePage.jsx
+        └── styles/
+            └── app.css         ← Full design system: tokens, components, animations,
+                                   responsive breakpoints (380 / 600 / 900px)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. ENVIRONMENT VARIABLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Variable               Where Set        Purpose
+────────────────────── ──────────────── ───────────────────────────────────────
+NODE_ENV               Render / Docker  'production' or 'development'
+PORT                   Render (auto)    HTTP port (defaults to 5000)
+DATABASE_URL           Render (auto)    PostgreSQL connection string
+REDIS_URL              Render (auto)    Redis connection string
+SESSION_SECRET         Render (auto)    Secret for signing session cookies
+FRONTEND_URL           render.yaml      Allowed CORS origin + OAuth redirect base
+GOOGLE_CLIENT_ID       Render dashboard Google OAuth client ID
+GOOGLE_CLIENT_SECRET   Render dashboard Google OAuth client secret
+GOOGLE_CALLBACK_URL    render.yaml      OAuth redirect URI
+GROQ_API_KEY           Render dashboard Groq AI API key (optional; disables chat if missing)
+GROQ_MODEL             Optional         LLM model name (defaults to openai/gpt-oss-120b)
+VITE_API_URL           Dockerfile       Empty string in prod (same-origin); set to
+                                        http://localhost:5000 in local dev
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. DEPLOYMENT ARCHITECTURE (PRODUCTION)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  User Browser
+      │  HTTPS / WSS
+      ▼
+  Render Load Balancer (handles TLS termination)
+      │
+      ▼
+  Docker Container (single service: "taskcircle")
+  ┌──────────────────────────────────────────────┐
+  │  Node.js Express Server (port from $PORT)    │
+  │                                              │
+  │  /            → serves built React (index.html + /assets/) │
+  │  /api/*       → REST API handlers             │
+  │  /ws/circles/ → WebSocket upgrade handler    │
+  │  /health      → health check for Render      │
+  └──────────────────────────────────────────────┘
+        │                    │
+        ▼                    ▼
+  PostgreSQL DB         Redis Cache
+  (Render managed)      (Render managed)
+
+  Build process (Dockerfile multi-stage):
+    Stage 1 (frontend-build): npm ci → npm run build → /dist
+    Stage 2 (final):          npm ci --omit=dev → copy /dist → /app/public
+    CMD: node src/server.js
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

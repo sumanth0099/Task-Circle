@@ -9,6 +9,7 @@ import TaskDetailPage from './pages/TaskDetailPage';
 import MyTasksPage from './pages/MyTasksPage';
 import NotificationsPage from './pages/NotificationsPage';
 import ProfilePage from './pages/ProfilePage';
+import CircleDataPage from './pages/CircleDataPage';
 import './styles/app.css';
 
 function ProtectedRoutes({ user, unreadCount, circles, circlesLoading, circlesError, refreshCircles, refreshUnread }) {
@@ -23,6 +24,7 @@ function ProtectedRoutes({ user, unreadCount, circles, circlesLoading, circlesEr
         <Route path="my-tasks" element={<MyTasksPage />} />
         <Route path="notifications" element={<NotificationsPage refreshUnread={refreshUnread} />} />
         <Route path="profile" element={<ProfilePage user={user} />} />
+        <Route path="circle-data" element={<CircleDataPage circles={circles} loading={circlesLoading} error={circlesError} />} />
       </Route>
     </Routes>
   );
