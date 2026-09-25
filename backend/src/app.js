@@ -17,6 +17,7 @@ import chatRoutes from './routes/chatRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { csrfMiddleware } from './middleware/csrf.js';
 import { sendSuccess } from './utils/response.js';
+import { AppError } from './utils/errors.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -48,23 +49,44 @@ app.use(helmet({
 // Safely handle missing FRONTEND_URL so the server still starts without env vars set
 const allowedOrigins = (env.frontendUrl || '').split(',').map((origin) => origin.trim()).filter(Boolean);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
+// ─── Serve frontend static files FIRST (before CORS/session/auth/CSRF) ───────
+// This ensures CSS/JS/images are never blocked by origin checks or Redis errors.
+const publicPath = path.join(__dirname, '../public');
+app.use(express.static(publicPath));
+
+app.use(cors((req, callback) => {
+  const origin = req.header('Origin');
+  let isAllowed = false;
+
+  // 1. If no origin is provided (same-origin GETs, curl, etc) -> Allow
+  if (!origin) {
+    isAllowed = true;
+  }
+  // 2. If origin matches our explicitly allowed origins list -> Allow
+  else if (allowedOrigins.includes(origin)) {
+    isAllowed = true;
+  }
+  // 3. If origin matches the Host header we are running on (same-origin POST/PUT) -> Allow
+  // This fixes unified deployments accessed via multiple/alternate URLs (like dg34 vs klmh)
+  else {
+    const host = req.get('host');
+    if (host && origin.replace(/^https?:\/\//, '') === host) {
+      isAllowed = true;
     }
-    return callback(new Error('CORS origin denied'));
-  },
-  credentials: true,
-  exposedHeaders: ['x-csrf-token', 'Content-Disposition', 'Content-Type']
+  }
+
+  if (isAllowed) {
+    callback(null, {
+      origin: true,
+      credentials: true,
+      exposedHeaders: ['x-csrf-token', 'Content-Disposition', 'Content-Type']
+    });
+  } else {
+    callback(new AppError('CORS origin denied', 403));
+  }
 }));
 
 app.use(express.json({ limit: '1mb' }));
-
-// ─── Serve frontend static files FIRST (before session/auth/CSRF) ────────────
-// This ensures CSS/JS/images are never blocked by auth middleware or Redis errors.
-const publicPath = path.join(__dirname, '../public');
-app.use(express.static(publicPath));
 
 // ─── Global rate limit ───────────────────────────────────────────────────────
 app.use(rateLimit({
