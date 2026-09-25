@@ -56,7 +56,7 @@ app.use(cors({
     return callback(new Error('CORS origin denied'));
   },
   credentials: true,
-  exposedHeaders: ['x-csrf-token']
+  exposedHeaders: ['x-csrf-token', 'Content-Disposition', 'Content-Type']
 }));
 
 app.use(express.json({ limit: '1mb' }));
@@ -97,7 +97,22 @@ export const sessionMiddleware = session({
 // Exported so the WebSocket server can reuse session+passport for WS auth
 export const passportSession = passport.session();
 
-app.use(sessionMiddleware);
+// Safe session wrapper: if the Redis store errors during startup (e.g. Redis
+// not yet connected on Render free tier), log the error and continue without
+// a session rather than returning a JSON 500 to every client.
+const safeSession = (req, res, next) => {
+  sessionMiddleware(req, res, (err) => {
+    if (err) {
+      console.error('[Session] Store error (Redis may be starting up):', err.message);
+      // Continue without session — CSRF will return 503, login will fail,
+      // but static assets and health check remain reachable.
+      return next();
+    }
+    return next();
+  });
+};
+
+app.use(safeSession);
 app.use(passport.initialize());
 app.use(passportSession);
 app.use(csrfMiddleware);

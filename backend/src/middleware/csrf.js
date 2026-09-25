@@ -5,7 +5,7 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 export const csrfMiddleware = (req, res, next) => {
   if (!req.session) {
-    return next(new AppError('Session unavailable', 500));
+    return next(new AppError('Session temporarily unavailable — please retry', 503));
   }
 
   if (!req.session.csrfToken) {
