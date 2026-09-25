@@ -54,22 +54,27 @@ export default function CircleDataPage({ circles, loading, error }) {
         throw new Error(msg);
       }
 
-      // Extract filename from Content-Disposition header if available
-      const disposition = response.headers.get('Content-Disposition') || '';
-      const match = disposition.match(/filename="?([^";\n]+)"?/);
-      const filename = match ? match[1] : `circle_${circleId}_data.csv`;
+      const jsonResponse = await response.json();
+      const { circleSummary, memberTaskReport } = jsonResponse.data;
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
+      const triggerDownload = (content, filename) => {
+        const blob = new Blob(['\uFEFF' + content], { type: 'text/csv; charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+      };
 
-      // Trigger browser download
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = filename;
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      URL.revokeObjectURL(url);
+      triggerDownload(circleSummary.content, circleSummary.filename);
+      
+      // Delay second download slightly to prevent browser blocking multiple rapid downloads
+      setTimeout(() => {
+        triggerDownload(memberTaskReport.content, memberTaskReport.filename);
+      }, 300);
     } catch (err) {
       setErrorMap((prev) => ({ ...prev, [circleId]: err.message }));
     } finally {

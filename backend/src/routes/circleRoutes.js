@@ -505,22 +505,15 @@ router.get(
     );
     if (!membershipResult.rowCount) throw new AppError('Access denied', 403);
 
-    // 3. Fetch all tasks for this circle with creator and assignee names
+    // 3. Fetch all tasks for this circle with assignee names
     const tasksResult = await pool.query(
       `SELECT
          t.id,
          t.title,
-         t.description,
-         t.priority,
          t.status,
-         t.due_date,
-         t.created_at,
-         t.assignment_group_id,
-         cb.name  AS creator_name,
          ab.name  AS assignee_name,
          ab.id    AS assignee_id
        FROM tasks t
-       LEFT JOIN users cb ON cb.id = t.created_by
        LEFT JOIN users ab ON ab.id = t.assigned_to
        WHERE t.circle_id = $1
        ORDER BY t.created_at ASC`,
@@ -528,7 +521,7 @@ router.get(
     );
     const tasks = tasksResult.rows;
 
-    // 4. Fetch all active members for member-level stats
+    // 4. Fetch all active members
     const membersResult = await pool.query(
       `SELECT u.id, u.name, m.role
        FROM memberships m
@@ -542,116 +535,62 @@ router.get(
     const members = membersResult.rows;
 
     // 5. Calculate circle-level statistics
+    const totalMembers = members.length;
     const totalTasks = tasks.length;
     const completedTasks = tasks.filter(t => t.status === 'COMPLETED').length;
     const inProgressTasks = tasks.filter(t => t.status === 'IN_PROGRESS').length;
     const todoTasks = tasks.filter(t => t.status === 'TODO').length;
-    const completionPct = totalTasks > 0
-      ? Math.round((completedTasks / totalTasks) * 100)
-      : 0;
 
-    // 6. Calculate per-member statistics from actual task assignment records
-    //    Each task row is already one assignment (one assigned_to), so we count directly.
-    const memberStats = members.map(member => {
-      const assigned = tasks.filter(t => t.assignee_id === member.id);
-      return {
-        id: member.id,
-        name: member.name,
-        role: member.role,
-        total: assigned.length,
-        completed: assigned.filter(t => t.status === 'COMPLETED').length,
-        inProgress: assigned.filter(t => t.status === 'IN_PROGRESS').length,
-        todo: assigned.filter(t => t.status === 'TODO').length,
-      };
-    });
+    // 6. Build Circle Summary CSV
+    const summaryLines = [];
+    summaryLines.push(csvRow(['Circle Name', 'Total Members', 'Total Tasks', 'Completed Tasks', 'In Progress Tasks', 'To Do Tasks']));
+    summaryLines.push(csvRow([
+      circle.name,
+      totalMembers,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      todoTasks
+    ]));
+    const summaryCsv = summaryLines.join('\n');
 
-    // 7. Build CSV lines
-    const lines = [];
-
-    // ── Circle Summary ───────────────────────────────────────────────────────
-    lines.push(csvRow(['CIRCLE SUMMARY']));
-    lines.push(csvRow(['Circle Name', circle.name]));
-    lines.push(csvRow(['Circle Code', circle.code]));
-    lines.push(csvRow(['Privacy', circle.privacy]));
-    lines.push(csvRow(['Total Tasks', totalTasks]));
-    lines.push(csvRow(['Completed', completedTasks]));
-    lines.push(csvRow(['In Progress', inProgressTasks]));
-    lines.push(csvRow(['To Do', todoTasks]));
-    lines.push(csvRow(['Completion %', `${completionPct}%`]));
-    lines.push(''); // blank separator
-
-    // ── Task Details ─────────────────────────────────────────────────────────
-    lines.push(csvRow(['TASK DETAILS']));
-    lines.push(csvRow([
+    // 7. Calculate per-member statistics and build Member Task Report CSV
+    const memberLines = [];
+    memberLines.push(csvRow([
       'Circle Name',
-      'Task Title',
-      'Description',
-      'Created By',
-      'Assigned To',
-      'Created Date',
-      'Due Date',
-      'Priority',
-      'Status',
-      'Group Assignment ID',
-    ]));
-
-    if (tasks.length === 0) {
-      lines.push(csvRow(['(No tasks in this circle)', '', '', '', '', '', '', '', '', '']));
-    } else {
-      for (const t of tasks) {
-        lines.push(csvRow([
-          circle.name,
-          t.title,
-          t.description || '',
-          t.creator_name || '',
-          t.assignee_name || '(Unassigned)',
-          formatDate(t.created_at),
-          formatDate(t.due_date),
-          t.priority,
-          t.status,
-          t.assignment_group_id || '',
-        ]));
-      }
-    }
-
-    lines.push(''); // blank separator
-
-    // ── Member Statistics ─────────────────────────────────────────────────────
-    lines.push(csvRow(['MEMBER STATISTICS']));
-    lines.push(csvRow([
       'Member Name',
-      'Role',
-      'Total Assigned',
-      'Completed Tasks',
-      'In Progress Tasks',
-      'To Do Tasks',
+      'Tasks Assigned Count',
+      'Tasks Finished Count',
+      'Names of Finished Tasks'
     ]));
 
-    if (memberStats.length === 0) {
-      lines.push(csvRow(['(No active members)', '', '', '', '', '']));
-    } else {
-      for (const ms of memberStats) {
-        lines.push(csvRow([
-          ms.name,
-          ms.role,
-          ms.total,
-          ms.completed,
-          ms.inProgress,
-          ms.todo,
-        ]));
-      }
+    for (const member of members) {
+      const assigned = tasks.filter(t => t.assignee_id === member.id);
+      const finished = assigned.filter(t => t.status === 'COMPLETED');
+      const finishedNames = finished.map(t => t.title).join('; ');
+      
+      memberLines.push(csvRow([
+        circle.name,
+        member.name,
+        assigned.length,
+        finished.length,
+        finishedNames
+      ]));
     }
+    const memberCsv = memberLines.join('\n');
 
-    // 8. Stream the CSV response
-    const csvContent = lines.join('\n');
     const safeName = circle.name.replace(/[^a-z0-9_\-]/gi, '_').slice(0, 50);
-    const filename = `circle_${safeName}_data.csv`;
 
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Cache-Control', 'no-store');
-    // BOM for Excel UTF-8 compatibility
-    res.send('\uFEFF' + csvContent);
+    sendSuccess(res, {
+      circleSummary: {
+        filename: `circle_${safeName}_summary.csv`,
+        content: summaryCsv
+      },
+      memberTaskReport: {
+        filename: `circle_${safeName}_member_report.csv`,
+        content: memberCsv
+      }
+    });
   })
 );
 
