@@ -20,13 +20,13 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://task-circle-klmh.onrender.com
+        value: https://task-circle-dg34.onrender.com
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_CALLBACK_URL
-        value: https://task-circle-klmh.onrender.com/api/auth/google/callback
+        value: https://task-circle-dg34.onrender.com/api/auth/google/callback
       - key: GROQ_API_KEY
         sync: false
 
